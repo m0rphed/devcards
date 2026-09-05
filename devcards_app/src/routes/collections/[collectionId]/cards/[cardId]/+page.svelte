@@ -1,0 +1,23 @@
+<script lang="ts">
+	import CardForm from '$lib/components/CardForm.svelte';
+	import type { PageServerData } from './$types';
+
+	let { data }: { data: PageServerData } = $props();
+</script>
+
+<div class="flex flex-col gap-4">
+	<a href="/collections/{data.collection.id}" class="w-fit text-sm text-blue-600 hover:underline">
+		← {data.collection.title}
+	</a>
+	<h1 class="text-xl font-semibold">Изменить карточку</h1>
+
+	<div class="rounded-md border border-gray-200 p-4">
+		<CardForm
+			formAction="?/update"
+			initialType={data.card.type}
+			initialContent={data.card.content}
+			initialTags={data.tagNames}
+			submitLabel="Сохранить"
+		/>
+	</div>
+</div>
