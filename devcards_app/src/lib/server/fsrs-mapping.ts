@@ -1,4 +1,4 @@
-import { createEmptyCard, type Card, type State } from 'ts-fsrs';
+import { createEmptyCard, type Card, type Grade, type State } from 'ts-fsrs';
 import type { reviewState } from '$lib/server/db/domain.schema';
 
 // Pure DB <-> ts-fsrs Card mapping, deliberately split out of srs.ts: no
@@ -14,6 +14,15 @@ export function dbStateToFsrs(state: DbState): State {
 
 export function fsrsStateToDb(state: State): DbState {
 	return DB_STATES[state];
+}
+
+// ts-fsrs's Grade (Rating minus Manual) is 1-4 — Again=1..Easy=4 — so index
+// by grade - 1, same offset-by-one idea as fsrsStateToDb's array lookup.
+export const DB_RATINGS = ['again', 'hard', 'good', 'easy'] as const;
+export type DbRating = (typeof DB_RATINGS)[number];
+
+export function gradeToDb(grade: Grade): DbRating {
+	return DB_RATINGS[grade - 1];
 }
 
 export type ReviewStateRow = typeof reviewState.$inferSelect;

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import { State } from 'ts-fsrs';
-import { dbStateToFsrs, fromFsrsCard, fsrsStateToDb, toFsrsCard, type ReviewStateRow } from './fsrs-mapping';
+import { Rating, State, type Grade } from 'ts-fsrs';
+import { dbStateToFsrs, fromFsrsCard, fsrsStateToDb, gradeToDb, toFsrsCard, type ReviewStateRow } from './fsrs-mapping';
 
 describe('dbStateToFsrs / fsrsStateToDb', () => {
 	test('round-trips every state', () => {
@@ -14,6 +14,15 @@ describe('dbStateToFsrs / fsrsStateToDb', () => {
 		expect(dbStateToFsrs('learning')).toBe(State.Learning);
 		expect(dbStateToFsrs('review')).toBe(State.Review);
 		expect(dbStateToFsrs('relearning')).toBe(State.Relearning);
+	});
+});
+
+describe('gradeToDb', () => {
+	test('matches ts-fsrs numeric Rating enum (offset by one — Manual has no db_rating)', () => {
+		expect(gradeToDb(Rating.Again as Grade)).toBe('again');
+		expect(gradeToDb(Rating.Hard as Grade)).toBe('hard');
+		expect(gradeToDb(Rating.Good as Grade)).toBe('good');
+		expect(gradeToDb(Rating.Easy as Grade)).toBe('easy');
 	});
 });
 

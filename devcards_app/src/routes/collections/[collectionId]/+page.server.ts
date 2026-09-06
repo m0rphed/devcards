@@ -16,6 +16,7 @@ import { parseCardContent } from '$lib/server/card-content';
 import { requireUser } from '$lib/server/require-user';
 import { getTagNamesByCard, parseTagNames, setCardTags } from '$lib/server/tags';
 import { renderCard } from '$lib/server/render-card';
+import { getCollectionProgress } from '$lib/server/stats';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async (event) => {
@@ -61,7 +62,8 @@ export const load: PageServerLoad = async (event) => {
 		allTags: collectionTags.map((t) => t.name),
 		searchQuery: searchQuery ?? '',
 		tagFilter: tagFilter ?? '',
-		shares
+		shares,
+		progress: await getCollectionProgress(collectionId, currentUser.id)
 	};
 };
 

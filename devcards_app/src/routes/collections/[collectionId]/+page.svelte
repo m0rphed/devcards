@@ -17,6 +17,20 @@
 		return { basic: 'Вопрос/ответ', cloze: 'Пропуск в тексте', multiple_choice: 'Выбор варианта' }[type] ?? type;
 	}
 
+	const STATE_LABELS: Record<string, string> = {
+		new: 'Новые',
+		learning: 'Изучение',
+		review: 'Повторение',
+		relearning: 'Пересдача'
+	};
+	// Fixed order (not whatever collection_progress happens to return rows
+	// in) so the widget doesn't reshuffle between visits.
+	const STATE_ORDER = ['new', 'learning', 'review', 'relearning'];
+	let orderedProgress = $derived(
+		STATE_ORDER.map((state) => data.progress.find((p) => p.state === state) ?? { state, cardCount: 0, dueCount: 0 })
+	);
+	let totalDue = $derived(data.progress.reduce((sum, p) => sum + p.dueCount, 0));
+
 	function tagHref(tagName: string) {
 		const params = new URLSearchParams();
 		if (data.searchQuery) params.set('q', data.searchQuery);
@@ -128,19 +142,38 @@
 	</div>
 
 	{#if data.cards.length > 0}
-		<div class="flex gap-2">
-			<a
-				href="/collections/{data.collection.id}/study"
-				class="w-fit rounded-md bg-green-600 px-4 py-2 text-sm text-white hover:bg-green-700"
-			>
-				▶ Учить
-			</a>
-			<a
-				href="/collections/{data.collection.id}/quiz"
-				class="w-fit rounded-md bg-purple-600 px-4 py-2 text-sm text-white hover:bg-purple-700"
-			>
-				📝 Тест
-			</a>
+		<div class="flex flex-col gap-3">
+			<div class="flex gap-2">
+				<a
+					href="/collections/{data.collection.id}/study"
+					class="w-fit rounded-md bg-green-600 px-4 py-2 text-sm text-white hover:bg-green-700"
+				>
+					▶ Учить{totalDue > 0 ? ` (${totalDue})` : ''}
+				</a>
+				<a
+					href="/collections/{data.collection.id}/quiz"
+					class="w-fit rounded-md bg-purple-600 px-4 py-2 text-sm text-white hover:bg-purple-700"
+				>
+					📝 Тест
+				</a>
+			</div>
+
+			<!-- Per-FSRS-state breakdown, from collection_progress() — see
+			     $lib/server/stats.ts. Cards with no review_state row at all
+			     (never studied) come back bucketed as 'new' by the function
+			     itself, not here. -->
+			<div class="flex flex-wrap gap-2 text-xs">
+				{#each orderedProgress as p (p.state)}
+					{#if p.cardCount > 0}
+						<span class="rounded-full bg-gray-100 px-2.5 py-1 text-gray-700">
+							{STATE_LABELS[p.state]}: {p.cardCount}
+							{#if p.dueCount > 0}
+								<span class="font-medium text-green-700">(due {p.dueCount})</span>
+							{/if}
+						</span>
+					{/if}
+				{/each}
+			</div>
 		</div>
 	{/if}
 

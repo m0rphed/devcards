@@ -15,6 +15,20 @@
       "when": 1788724904137,
       "tag": "0001_fluffy_morph",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788728187787,
+      "tag": "0002_young_gateway",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788728269884,
+      "tag": "0003_add_collection_progress_function",
+      "breakpoints": true
     }
   ]
 }

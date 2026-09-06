@@ -15,6 +15,18 @@
 			<p class="text-lg font-medium">Всё повторено 🎉</p>
 			<p class="mt-1 text-sm text-gray-500">Новых карточек к показу пока нет.</p>
 		</div>
+
+		{#if data.activity.length > 0}
+			{@const totalReviews = data.activity.reduce((sum, d) => sum + d.reviews, 0)}
+			{@const totalCorrect = data.activity.reduce((sum, d) => sum + d.correct, 0)}
+			<div class="rounded-md border border-gray-200 p-4 text-sm text-gray-600">
+				<p class="font-medium text-gray-800">За последние 7 дней</p>
+				<p class="mt-1">
+					{totalReviews} повторени{totalReviews === 1 ? 'е' : totalReviews < 5 ? 'я' : 'й'}, из них верно
+					{Math.round((totalCorrect / totalReviews) * 100)}%
+				</p>
+			</div>
+		{/if}
 	{:else}
 		<!-- Keyed by loadKey (not card.id): "Again" can bring the very same card
 		     back up immediately, and we still need a fresh component instance

@@ -12,7 +12,9 @@ import {
 	index,
 	uniqueIndex,
 	primaryKey,
-	check
+	check,
+	pgView,
+	bigint
 } from 'drizzle-orm/pg-core';
 import { user } from './auth.schema';
 import { citext, tsvector, bytea } from './custom-types';
@@ -187,6 +189,81 @@ export const reviewState = pgTable(
 		index('review_state_due_idx').on(table.userId, table.due)
 	]
 );
+
+// ts-fsrs's Rating (minus Manual, which the app never sends — see Grade in
+// srs.ts). Kept as its own enum rather than a raw 1-4 smallint for the same
+// reason fsrs_state is an enum and not a raw 0-3 int: a `rating = 'good'` row
+// is self-documenting in `psql`/pgAdmin without cross-referencing ts-fsrs's
+// source, an int matching an external library's internal numbering isn't.
+export const reviewRating = pgEnum('review_rating', ['again', 'hard', 'good', 'easy']);
+
+// One row per FSRS grading event, append-only, never updated — the history
+// `review_state` doesn't keep (every grade overwrites it with the new
+// current state). Same role here as quiz_attempts plays for quiz mode:
+// quiz mode already got this right (session + per-answer history); SRS
+// study mode didn't, until now.
+//
+// The *_before columns are the review's ts-fsrs `ReviewLog.state` /
+// `.due` / `.stability` / `.difficulty` — the card's state going INTO this
+// review, not the (already-current, in review_state) state coming out of
+// it. That's what lets a query answer "how did this review play out" (was
+// it overdue? how stable was it before this grade?) without needing the
+// *next* row in the same card's history.
+export const reviewLog = pgTable(
+	'review_log',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		userId: text('user_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		cardId: uuid('card_id')
+			.notNull()
+			.references(() => cards.id, { onDelete: 'cascade' }),
+		rating: reviewRating('rating').notNull(),
+		stateBefore: fsrsState('state_before').notNull(),
+		dueBefore: timestamp('due_before', { withTimezone: true }).notNull(),
+		stabilityBefore: real('stability_before').notNull(),
+		difficultyBefore: real('difficulty_before').notNull(),
+		scheduledDays: integer('scheduled_days').notNull(),
+		reviewedAt: timestamp('reviewed_at', { withTimezone: true }).notNull()
+	},
+	(table) => [
+		// "my review history, most recent first" / feeds review_activity_daily.
+		index('review_log_user_reviewed_idx').on(table.userId, table.reviewedAt),
+		// "this card's full review history".
+		index('review_log_card_idx').on(table.cardId, table.reviewedAt)
+	]
+);
+
+// Per-user daily review activity (count + correct/incorrect split) — an
+// Anki-style activity calendar/heatmap, computed straight from review_log.
+// A plain view, not materialized: at this project's scale the underlying
+// table is small enough that re-aggregating on every read is cheap, and a
+// plain view never goes stale (no refresh policy to think about).
+//
+// Declared with explicit column builders (the "manual" pgView form) rather
+// than inferring them from a query builder .as(qb => ...): raw sql<T>`...`
+// projections there come back as bare expressions with no real column type
+// attached, so drizzle can't serialize a JS Date into a WHERE ... day >= $1
+// comparison against them (confirmed the hard way — this exact query
+// against the qb-inferred version threw at runtime). Real column builders
+// (timestamp(), bigint()) know how to do that.
+export const reviewActivityDaily = pgView('review_activity_daily', {
+	userId: text('user_id').notNull(),
+	day: timestamp('day', { withTimezone: true }).notNull(),
+	reviews: bigint('reviews', { mode: 'number' }).notNull(),
+	correct: bigint('correct', { mode: 'number' }).notNull(),
+	incorrect: bigint('incorrect', { mode: 'number' }).notNull()
+}).as(sql`
+	select
+		${reviewLog.userId} as user_id,
+		date_trunc('day', ${reviewLog.reviewedAt}) as day,
+		count(*) as reviews,
+		count(*) filter (where ${reviewLog.rating} in ('good', 'easy')) as correct,
+		count(*) filter (where ${reviewLog.rating} in ('again', 'hard')) as incorrect
+	from ${reviewLog}
+	group by ${reviewLog.userId}, date_trunc('day', ${reviewLog.reviewedAt})
+`);
 
 export const quizSessions = pgTable(
 	'quiz_sessions',
