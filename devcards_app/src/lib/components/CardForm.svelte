@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { enhance } from '$app/forms';
 	import { MarkdownEditor } from 'carta-md';
 	import 'carta-md/default.css';
@@ -26,21 +27,28 @@
 		onSuccess?: () => void;
 	} = $props();
 
+	// Stable per-instance id for wiring <label for> to carta-md's editor
+	// (it doesn't render as a plain <label>-friendly control on its own).
+	const uid = $props.id();
+
 	// initialContent's shape always matches initialType by construction (see callers) —
 	// a runtime cast here is simpler than re-deriving the union narrowing for a
 	// props-only editing convenience.
-	const seed = initialContent as
+	const seed = untrack(() => initialContent) as
 		| { front?: string; back?: string; text?: string; question?: string; options?: string[]; correct_index?: number }
 		| undefined;
 
-	let type = $state<CardType>(initialType);
-	let front = $state(seed?.front ?? '');
-	let back = $state(seed?.back ?? '');
-	let clozeText = $state(seed?.text ?? '');
-	let question = $state(seed?.question ?? '');
-	let options = $state<string[]>(seed?.options ? [...seed.options] : ['', '']);
-	let correctIndex = $state(seed?.correct_index ?? 0);
-	let tagsInput = $state(initialTags.join(', '));
+	// untrack(): these are deliberately one-time snapshots to seed local
+	// editable state, not meant to track later prop changes (editing a field
+	// shouldn't get clobbered if the parent happens to re-pass initial*).
+	let type = $state<CardType>(untrack(() => initialType));
+	let front = $state(untrack(() => seed?.front) ?? '');
+	let back = $state(untrack(() => seed?.back) ?? '');
+	let clozeText = $state(untrack(() => seed?.text) ?? '');
+	let question = $state(untrack(() => seed?.question) ?? '');
+	let options = $state<string[]>(untrack(() => (seed?.options ? [...seed.options] : ['', ''])));
+	let correctIndex = $state(untrack(() => seed?.correct_index) ?? 0);
+	let tagsInput = $state(untrack(() => initialTags.join(', ')));
 
 	let errorMessage = $state('');
 
@@ -69,9 +77,9 @@
 	}}
 	class="flex flex-col gap-3"
 >
-	<label class="block text-sm">
+	<label for="{uid}-type" class="block text-sm">
 		Тип
-		<select name="type" bind:value={type} class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+		<select id="{uid}-type" name="type" bind:value={type} class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
 			<option value="basic">Вопрос/ответ</option>
 			<option value="cloze">Пропуск в тексте</option>
 			<option value="multiple_choice">Выбор варианта</option>
@@ -80,29 +88,34 @@
 
 	{#if type === 'basic'}
 		<div class="text-sm">
-			<span>Лицевая сторона (markdown)</span>
+			<label for="{uid}-front">Лицевая сторона (markdown)</label>
 			<div class="mt-1">
-				<MarkdownEditor {carta} bind:value={front} mode="tabs" textarea={{ name: 'front', required: true }} />
+				<MarkdownEditor {carta} bind:value={front} mode="tabs" textarea={{ name: 'front', id: `${uid}-front`, required: true }} />
 			</div>
 		</div>
 		<div class="text-sm">
-			<span>Обратная сторона (markdown)</span>
+			<label for="{uid}-back">Обратная сторона (markdown)</label>
 			<div class="mt-1">
-				<MarkdownEditor {carta} bind:value={back} mode="tabs" textarea={{ name: 'back', required: true }} />
+				<MarkdownEditor {carta} bind:value={back} mode="tabs" textarea={{ name: 'back', id: `${uid}-back`, required: true }} />
 			</div>
 		</div>
 	{:else if type === 'cloze'}
 		<div class="text-sm">
-			<span>Текст с пропуском (например: «горутины дешевле, чем {'{{c1::потоки ОС}}'}», markdown)</span>
+			<label for="{uid}-text">Текст с пропуском (например: «горутины дешевле, чем {'{{c1::потоки ОС}}'}», markdown)</label>
 			<div class="mt-1">
-				<MarkdownEditor {carta} bind:value={clozeText} mode="tabs" textarea={{ name: 'text', required: true }} />
+				<MarkdownEditor {carta} bind:value={clozeText} mode="tabs" textarea={{ name: 'text', id: `${uid}-text`, required: true }} />
 			</div>
 		</div>
 	{:else}
 		<div class="text-sm">
-			<span>Вопрос (markdown)</span>
+			<label for="{uid}-question">Вопрос (markdown)</label>
 			<div class="mt-1">
-				<MarkdownEditor {carta} bind:value={question} mode="tabs" textarea={{ name: 'question', required: true }} />
+				<MarkdownEditor
+					{carta}
+					bind:value={question}
+					mode="tabs"
+					textarea={{ name: 'question', id: `${uid}-question`, required: true }}
+				/>
 			</div>
 		</div>
 		<div class="flex flex-col gap-2">
@@ -115,6 +128,7 @@
 						value={i}
 						checked={correctIndex === i}
 						onchange={() => (correctIndex = i)}
+						aria-label="Отметить вариант {i + 1} как правильный"
 					/>
 					<input
 						name="options"
@@ -132,9 +146,10 @@
 		</div>
 	{/if}
 
-	<label class="block text-sm">
+	<label for="{uid}-tags" class="block text-sm">
 		Теги (через запятую)
 		<input
+			id="{uid}-tags"
 			name="tags"
 			bind:value={tagsInput}
 			placeholder="go, concurrency"

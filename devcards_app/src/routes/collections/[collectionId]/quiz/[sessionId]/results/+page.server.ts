@@ -18,6 +18,8 @@ export const load: PageServerLoad = async (event) => {
 	return {
 		collection,
 		session: results.session,
-		attempts: results.attempts.map((a) => ({ ...a, rendered: renderCard(a.card.type, a.card.content) }))
+		attempts: await Promise.all(
+			results.attempts.map(async (a) => ({ ...a, rendered: await renderCard(a.card.type, a.card.content) }))
+		)
 	};
 };

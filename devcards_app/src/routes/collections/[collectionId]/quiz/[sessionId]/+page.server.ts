@@ -23,7 +23,7 @@ export const load: PageServerLoad = async (event) => {
 	if (!card) redirect(302, `/collections/${collectionId}/quiz/${sessionId}/results`);
 
 	const answeredSoFar = await getAnsweredCount(sessionId);
-	const rendered = renderCard(card.type, card.content);
+	const rendered = await renderCard(card.type, card.content);
 
 	// Fresh key per load: a card can't repeat within one quiz session (unlike
 	// SRS "Again"), but keeping the same pattern as /study keeps this immune
@@ -60,9 +60,12 @@ export const actions: Actions = {
 			isCorrect = selectedIndex === content.correct_index;
 		} else {
 			// basic/cloze have no structured answer to auto-grade — the
-			// student self-reports, same self-assessment idea as SRS review.
+			// student types an attempt, then self-reports, same self-assessment
+			// idea as SRS review (just with an actual commit-to-an-answer step
+			// first, since this is a "test" and not silent recall).
 			const selfReported = formData.get('selfReported') === 'correct';
-			givenAnswer = { self_reported_correct: selfReported };
+			const typedAnswer = formData.get('typedAnswer')?.toString().trim() || null;
+			givenAnswer = { self_reported_correct: selfReported, typed_answer: typedAnswer };
 			isCorrect = selfReported;
 		}
 

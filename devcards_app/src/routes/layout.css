@@ -1,6 +1,7 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
+@import '@cartamd/plugin-code/default.css';
 
 /* carta-md (markdown editor): required, or the code-input pane has no font. */
 .carta-font-code {

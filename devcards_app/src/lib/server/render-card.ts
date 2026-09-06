@@ -17,31 +17,37 @@ export type RenderedCard =
  * study/quiz views then just toggle *visibility* of already-rendered HTML
  * (no client-side markdown processing anywhere outside the editor itself).
  *
+ * Async and uses `carta.render()`, not the sync `renderSSR()`: renderSSR is
+ * documented to always skip syntax highlighting (that's the whole reason it
+ * can be sync — Shiki's tokenizer setup is inherently async), so code blocks
+ * would come out as plain unstyled <pre> otherwise.
+ *
  * Cloze is the one type where the actual text differs between masked and
  * revealed (the `{{c1::answer}}` span itself changes) — rather than shipping
  * raw markdown + a client-side renderer just for that, we render both
  * variants up front; everything else only ever needs one render per field.
  */
-export function renderCard(type: string, content: CardContent): RenderedCard {
+export async function renderCard(type: string, content: CardContent): Promise<RenderedCard> {
 	if (type === 'cloze') {
 		const c = content as { text: string };
-		return {
-			kind: 'cloze',
-			maskedHtml: carta.renderSSR(maskCloze(c.text, false)),
-			revealedHtml: carta.renderSSR(maskCloze(c.text, true))
-		};
+		const [maskedHtml, revealedHtml] = await Promise.all([
+			carta.render(maskCloze(c.text, false)),
+			carta.render(maskCloze(c.text, true))
+		]);
+		return { kind: 'cloze', maskedHtml, revealedHtml };
 	}
 
 	if (type === 'multiple_choice') {
 		const c = content as { question: string; options: string[]; correct_index: number };
 		return {
 			kind: 'multiple_choice',
-			questionHtml: carta.renderSSR(c.question),
+			questionHtml: await carta.render(c.question),
 			options: c.options,
 			correctIndex: c.correct_index
 		};
 	}
 
 	const c = content as { front: string; back: string };
-	return { kind: 'basic', frontHtml: carta.renderSSR(c.front), backHtml: carta.renderSSR(c.back) };
+	const [frontHtml, backHtml] = await Promise.all([carta.render(c.front), carta.render(c.back)]);
+	return { kind: 'basic', frontHtml, backHtml };
 }

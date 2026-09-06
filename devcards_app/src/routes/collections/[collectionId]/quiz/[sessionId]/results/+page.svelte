@@ -26,15 +26,23 @@
 					</span>
 
 					{#if rendered.kind === 'basic'}
+						{@const given = attempt.givenAnswer as { typed_answer: string | null }}
 						<div class="prose prose-sm mt-1 max-w-none">
 							<span class="text-xs text-gray-500">Q:</span>
 							<PreRendered html={rendered.frontHtml} />
 						</div>
+						{#if given.typed_answer}
+							<p class="text-sm text-gray-500">Твой ответ: <span class="text-gray-700">{given.typed_answer}</span></p>
+						{/if}
 						<div class="prose prose-sm max-w-none">
 							<span class="text-xs text-gray-500">A:</span>
 							<PreRendered html={rendered.backHtml} />
 						</div>
 					{:else if rendered.kind === 'cloze'}
+						{@const given = attempt.givenAnswer as { typed_answer: string | null }}
+						{#if given.typed_answer}
+							<p class="mt-1 text-sm text-gray-500">Твой ответ: <span class="text-gray-700">{given.typed_answer}</span></p>
+						{/if}
 						<div class="prose prose-sm mt-1 max-w-none">
 							<PreRendered html={rendered.revealedHtml} />
 						</div>

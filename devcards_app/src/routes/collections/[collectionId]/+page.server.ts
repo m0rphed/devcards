@@ -54,7 +54,9 @@ export const load: PageServerLoad = async (event) => {
 	return {
 		collection,
 		role,
-		cards: collectionCards.map((card) => ({ ...card, rendered: renderCard(card.type, card.content) })),
+		cards: await Promise.all(
+			collectionCards.map(async (card) => ({ ...card, rendered: await renderCard(card.type, card.content) }))
+		),
 		tagsByCard: Object.fromEntries(tagsByCard),
 		allTags: collectionTags.map((t) => t.name),
 		searchQuery: searchQuery ?? '',

@@ -1,4 +1,3 @@
-import { paraglideVitePlugin } from '@inlang/paraglide-js';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vitest/config';
 import { playwright } from '@vitest/browser-playwright';
@@ -6,11 +5,6 @@ import adapter from '@sveltejs/adapter-node';
 import { sveltekit } from '@sveltejs/kit/vite';
 
 export default defineConfig({
-	// We only ever call carta-md's renderSSR() server-side (no syntax
-	// highlighting there anyway) — drops shiki from the server bundle.
-	define: {
-		__ENABLE_CARTA_SSR_HIGHLIGHTER__: false
-	},
 	plugins: [
 		tailwindcss(),
 		sveltekit({
@@ -28,12 +22,6 @@ export default defineConfig({
 					config.include.push('../drizzle.config.ts');
 				}
 			}
-		}),
-
-		paraglideVitePlugin({
-			project: './project.inlang',
-			outdir: './src/lib/paraglide',
-			emitTsDeclarations: true
 		})
 	],
 	test: {

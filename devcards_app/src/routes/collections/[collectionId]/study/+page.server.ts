@@ -14,7 +14,7 @@ export const load: PageServerLoad = async (event) => {
 	if (!collection || role === null) error(404, 'Коллекция не найдена');
 
 	const next = await getNextDueCard(collectionId, currentUser.id);
-	const rendered = next.card ? renderCard(next.card.type, next.card.content) : null;
+	const rendered = next.card ? await renderCard(next.card.type, next.card.content) : null;
 	// "Again" can bring the very same card back up immediately (short learning
 	// step) — a random key per load forces the reveal state to reset even when
 	// data.card.id is unchanged from the previous card shown.
