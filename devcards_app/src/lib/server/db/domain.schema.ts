@@ -10,11 +10,17 @@ import {
 	real,
 	integer,
 	index,
+	uniqueIndex,
 	primaryKey,
 	check
 } from 'drizzle-orm/pg-core';
 import { user } from './auth.schema';
-import { citext, tsvector } from './custom-types';
+import { citext, tsvector, bytea } from './custom-types';
+
+// Attachments (card images) allow-listed here and in
+// $lib/server/attachments.ts — keep both in sync if this ever changes.
+export const ATTACHMENT_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp'] as const;
+export const ATTACHMENT_MAX_BYTES = 5 * 1024 * 1024;
 
 // Hand-written domain schema for devcards. See ../../../../phase01.schema_design.md
 // for the full rationale behind every table/index/type choice below.
@@ -198,6 +204,51 @@ export const quizSessions = pgTable(
 		totalQuestions: integer('total_questions').notNull()
 	},
 	(table) => [index('quiz_sessions_user_idx').on(table.userId, table.startedAt)]
+);
+
+// Images pasted/dropped/attached into card markdown (front/back/cloze/
+// question text), via carta-md's attachment plugin. Not FK'd to a specific
+// card: the upload happens the moment the editor sees the file — before the
+// card (or even the collection) is ever saved — so the only durable link
+// between an attachment and the card(s) that use it is the `/attachments/id`
+// URL sitting in that card's markdown content. Simpler than trying to keep a
+// reference count in sync with free-text edits, at the cost of never
+// garbage-collecting attachments nobody references anymore (acceptable at
+// this project's scale — see KNOWN_RISKS.md).
+export const attachments = pgTable(
+	'attachments',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		ownerId: text('owner_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		mimeType: text('mime_type').notNull(),
+		byteSize: integer('byte_size').notNull(),
+		// Content hash (hex sha256), computed app-side — dedup key below, and
+		// doubles as a stable ETag when serving the file.
+		sha256: text('sha256').notNull(),
+		data: bytea('data').notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+	},
+	(table) => [
+		// Re-uploading (or re-pasting) the same image — the same user dragging
+		// one screenshot into two different cards — reuses the existing row
+		// instead of storing identical bytes twice.
+		uniqueIndex('attachments_owner_sha256_idx').on(table.ownerId, table.sha256),
+		// "my attachments" / quota-style lookups.
+		index('attachments_owner_idx').on(table.ownerId),
+		check(
+			'attachments_mime_type_check',
+			sql`${table.mimeType} = ANY (ARRAY['image/png','image/jpeg','image/webp'])`
+		),
+		// CHECK constraints must be constant expressions — sql.raw() here, not
+		// a plain `sql` template value, or drizzle-kit emits a bound `$1`
+		// placeholder that Postgres rejects inside a CHECK.
+		check(
+			'attachments_byte_size_check',
+			sql`${table.byteSize} > 0 AND ${table.byteSize} <= ${sql.raw(String(ATTACHMENT_MAX_BYTES))}`
+		)
+	]
 );
 
 export const quizAttempts = pgTable(

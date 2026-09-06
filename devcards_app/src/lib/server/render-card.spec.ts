@@ -27,6 +27,27 @@ describe('renderCard', () => {
 		expect(rendered.revealedHtml).not.toContain('[...]');
 	});
 
+	test('basic: renders LaTeX/KaTeX math, and DOMPurify does not strip it', async () => {
+		// Regression test: rehype-katex's output leans on MathML tags and lots
+		// of inline `style="..."` attributes — easy for a sanitizer allowlist
+		// to quietly eat. Assert on the actual output rather than trusting
+		// that DOMPurify's defaults cover it.
+		const rendered = await renderCard('basic', {
+			front: 'Pythagorean theorem: $a^2+b^2=c^2$',
+			back: '$$\\int_0^\\infty e^{-x}\\,dx = 1$$'
+		});
+		expect(rendered.kind).toBe('basic');
+		if (rendered.kind !== 'basic') throw new Error('unreachable');
+		expect(rendered.frontHtml).toContain('class="katex"');
+		expect(rendered.backHtml).toContain('class="katex"');
+		// The two things DOMPurify defaults are most likely to have quietly
+		// eaten: KaTeX's positioning relies on inline style=, and
+		// rehype-katex's default output includes a MathML <math> tree
+		// alongside the HTML rendering.
+		expect(rendered.frontHtml).toMatch(/style="[^"]/);
+		expect(rendered.frontHtml).toContain('<math');
+	});
+
 	test('multiple_choice: renders the question, passes options through as-is', async () => {
 		const rendered = await renderCard('multiple_choice', {
 			question: 'Pick one',

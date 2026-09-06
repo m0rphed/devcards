@@ -1,6 +1,11 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import './layout.css';
+	// KaTeX's own stylesheet (font sizing/positioning for rendered math) —
+	// loaded globally, not just alongside the editor: study/quiz/results
+	// pages render already-rendered KaTeX HTML server-side without ever
+	// mounting a <MarkdownEditor>, so they need this too.
+	import 'katex/dist/katex.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import type { LayoutData } from './$types';
 

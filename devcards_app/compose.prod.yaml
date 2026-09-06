@@ -30,6 +30,10 @@ services:
       RESEND_API_KEY: ${RESEND_API_KEY}
       HOST: 0.0.0.0
       PORT: 3000
+      # adapter-node defaults to 512K — too small for card image uploads.
+      # Comfortably above ATTACHMENT_MAX_BYTES (5MB, domain.schema.ts) to
+      # leave headroom for multipart overhead.
+      BODY_SIZE_LIMIT: 8M
     # No host port published either — only Caddy talks to it, over the
     # docker network, by service name (`app:3000`).
 

@@ -3,6 +3,7 @@
 	import { enhance } from '$app/forms';
 	import { MarkdownEditor } from 'carta-md';
 	import 'carta-md/default.css';
+	import '@cartamd/plugin-attachment/default.css';
 	import { createEditorCarta } from '$lib/markdown';
 
 	// One Carta instance *per editor widget* — never shared, even between

@@ -19,3 +19,17 @@ export const tsvector = customType<{ data: string }>({
 		return 'tsvector';
 	}
 });
+
+/**
+ * Postgres `bytea` — raw binary storage for uploaded attachments (card
+ * images). No separate extension or object-storage service needed: `bytea`
+ * is built in, Postgres TOASTs large values out-of-line automatically (so
+ * these rows don't bloat scans of the table itself), and `postgres-js`
+ * round-trips this type as a plain Node `Buffer` with zero extra config —
+ * see ../attachments.ts.
+ */
+export const bytea = customType<{ data: Buffer }>({
+	dataType() {
+		return 'bytea';
+	}
+});
