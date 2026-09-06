@@ -1,40 +1,42 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { PreRendered } from 'carta-md';
 	import type { StudyCard } from '$lib/server/srs';
+	import type { RenderedCard } from '$lib/server/render-card';
 
-	let { card, current, total }: { card: StudyCard; current: number; total: number } = $props();
+	let { card, rendered, current, total }: { card: StudyCard; rendered: RenderedCard; current: number; total: number } =
+		$props();
 	let revealed = $state(false);
-
-	const CLOZE_PATTERN = /\{\{c\d+::(.*?)\}\}/g;
-	function clozeText(text: string, reveal: boolean) {
-		return text.replace(CLOZE_PATTERN, (_, answer: string) => (reveal ? answer : '[...]'));
-	}
 </script>
 
 <p class="text-sm text-gray-500">Вопрос {current} из {total}</p>
 
 <div class="rounded-md border border-gray-200 p-6">
-	{#if card.type === 'multiple_choice'}
-		{@const content = card.content as { question: string; options: string[] }}
-		<p class="text-lg">{content.question}</p>
-	{:else if card.type === 'basic'}
-		{@const content = card.content as { front: string; back: string }}
-		<p class="text-lg">{content.front}</p>
+	{#if rendered.kind === 'multiple_choice'}
+		<div class="prose max-w-none">
+			<PreRendered html={rendered.questionHtml} />
+		</div>
+	{:else if rendered.kind === 'basic'}
+		<div class="prose max-w-none">
+			<PreRendered html={rendered.frontHtml} />
+		</div>
 		{#if revealed}
 			<hr class="my-4 border-gray-200" />
-			<p class="text-lg text-gray-700">{content.back}</p>
+			<div class="prose max-w-none text-gray-700">
+				<PreRendered html={rendered.backHtml} />
+			</div>
 		{/if}
 	{:else}
-		{@const content = card.content as { text: string }}
-		<p class="text-lg">{clozeText(content.text, revealed)}</p>
+		<div class="prose max-w-none">
+			<PreRendered html={revealed ? rendered.revealedHtml : rendered.maskedHtml} />
+		</div>
 	{/if}
 </div>
 
-{#if card.type === 'multiple_choice'}
-	{@const content = card.content as { options: string[] }}
+{#if rendered.kind === 'multiple_choice'}
 	<form method="post" action="?/answer" use:enhance class="flex flex-col gap-2">
 		<input type="hidden" name="cardId" value={card.id} />
-		{#each content.options as option, i}
+		{#each rendered.options as option, i}
 			<button
 				name="selectedIndex"
 				value={i}

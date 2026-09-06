@@ -1,42 +1,43 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { PreRendered } from 'carta-md';
 	import type { StudyCard } from '$lib/server/srs';
+	import type { RenderedCard } from '$lib/server/render-card';
 
 	// Local `revealed` state — owned entirely by this component instance, so
 	// the parent must recreate this component (via {#key}) whenever a new
 	// card is shown, even if it happens to be the same card id as before
 	// (e.g. "Again" bringing it right back).
-	let { card, remaining }: { card: StudyCard; remaining: number } = $props();
+	let { card, rendered, remaining }: { card: StudyCard; rendered: RenderedCard; remaining: number } = $props();
 	let revealed = $state(false);
-
-	const CLOZE_PATTERN = /\{\{c\d+::(.*?)\}\}/g;
-
-	function clozeText(text: string, reveal: boolean) {
-		return text.replace(CLOZE_PATTERN, (_, answer: string) => (reveal ? answer : '[...]'));
-	}
 </script>
 
 <p class="text-sm text-gray-500">Осталось карточек: {remaining}</p>
 
 <div class="rounded-md border border-gray-200 p-6">
-	{#if card.type === 'basic'}
-		{@const content = card.content as { front: string; back: string }}
-		<p class="text-lg">{content.front}</p>
+	{#if rendered.kind === 'basic'}
+		<div class="prose max-w-none">
+			<PreRendered html={rendered.frontHtml} />
+		</div>
 		{#if revealed}
 			<hr class="my-4 border-gray-200" />
-			<p class="text-lg text-gray-700">{content.back}</p>
+			<div class="prose max-w-none text-gray-700">
+				<PreRendered html={rendered.backHtml} />
+			</div>
 		{/if}
-	{:else if card.type === 'cloze'}
-		{@const content = card.content as { text: string }}
-		<p class="text-lg">{clozeText(content.text, revealed)}</p>
+	{:else if rendered.kind === 'cloze'}
+		<div class="prose max-w-none">
+			<PreRendered html={revealed ? rendered.revealedHtml : rendered.maskedHtml} />
+		</div>
 	{:else}
-		{@const content = card.content as { question: string; options: string[]; correct_index: number }}
-		<p class="text-lg">{content.question}</p>
+		<div class="prose max-w-none">
+			<PreRendered html={rendered.questionHtml} />
+		</div>
 		{#if revealed}
 			<ul class="mt-4 flex flex-col gap-1">
-				{#each content.options as option, i}
-					<li class={i === content.correct_index ? 'font-medium text-green-700' : 'text-gray-600'}>
-						{i === content.correct_index ? '✓' : '—'}
+				{#each rendered.options as option, i}
+					<li class={i === rendered.correctIndex ? 'font-medium text-green-700' : 'text-gray-600'}>
+						{i === rendered.correctIndex ? '✓' : '—'}
 						{option}
 					</li>
 				{/each}

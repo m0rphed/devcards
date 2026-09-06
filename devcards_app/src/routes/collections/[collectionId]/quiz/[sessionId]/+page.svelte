@@ -11,6 +11,11 @@
 	</a>
 
 	{#key data.loadKey}
-		<QuizCardView card={data.card} current={data.answeredSoFar + 1} total={data.session.totalQuestions} />
+		<QuizCardView
+			card={data.card}
+			rendered={data.rendered}
+			current={data.answeredSoFar + 1}
+			total={data.session.totalQuestions}
+		/>
 	{/key}
 </div>

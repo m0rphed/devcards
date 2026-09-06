@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { PreRendered } from 'carta-md';
 	import type { PageServerData } from './$types';
 
 	let { data }: { data: PageServerData } = $props();
@@ -18,26 +19,33 @@
 	<div>
 		<h2 class="mb-3 text-lg font-semibold">Разбор ответов</h2>
 		<ul class="flex flex-col gap-2">
-			{#each data.attempts as { attempt, card } (attempt.id)}
+			{#each data.attempts as { attempt, rendered } (attempt.id)}
 				<li class="rounded-md border p-4 {attempt.isCorrect ? 'border-green-200' : 'border-red-200'}">
 					<span class="text-xs {attempt.isCorrect ? 'text-green-700' : 'text-red-700'}">
 						{attempt.isCorrect ? '✓ верно' : '✗ неверно'}
 					</span>
 
-					{#if card.type === 'basic'}
-						{@const content = card.content as { front: string; back: string }}
-						<p class="mt-1 text-sm"><span class="text-gray-500">Q:</span> {content.front}</p>
-						<p class="text-sm"><span class="text-gray-500">A:</span> {content.back}</p>
-					{:else if card.type === 'cloze'}
-						{@const content = card.content as { text: string }}
-						<p class="mt-1 text-sm">{content.text}</p>
+					{#if rendered.kind === 'basic'}
+						<div class="prose prose-sm mt-1 max-w-none">
+							<span class="text-xs text-gray-500">Q:</span>
+							<PreRendered html={rendered.frontHtml} />
+						</div>
+						<div class="prose prose-sm max-w-none">
+							<span class="text-xs text-gray-500">A:</span>
+							<PreRendered html={rendered.backHtml} />
+						</div>
+					{:else if rendered.kind === 'cloze'}
+						<div class="prose prose-sm mt-1 max-w-none">
+							<PreRendered html={rendered.revealedHtml} />
+						</div>
 					{:else}
-						{@const content = card.content as { question: string; options: string[]; correct_index: number }}
 						{@const given = attempt.givenAnswer as { selected_index: number }}
-						<p class="mt-1 text-sm">{content.question}</p>
-						<p class="text-sm text-gray-500">Твой ответ: {content.options[given.selected_index]}</p>
+						<div class="prose prose-sm mt-1 max-w-none">
+							<PreRendered html={rendered.questionHtml} />
+						</div>
+						<p class="text-sm text-gray-500">Твой ответ: {rendered.options[given.selected_index]}</p>
 						{#if !attempt.isCorrect}
-							<p class="text-sm text-green-700">Правильный: {content.options[content.correct_index]}</p>
+							<p class="text-sm text-green-700">Правильный: {rendered.options[rendered.correctIndex]}</p>
 						{/if}
 					{/if}
 				</li>

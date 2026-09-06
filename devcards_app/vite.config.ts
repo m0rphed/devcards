@@ -6,6 +6,11 @@ import adapter from '@sveltejs/adapter-node';
 import { sveltekit } from '@sveltejs/kit/vite';
 
 export default defineConfig({
+	// We only ever call carta-md's renderSSR() server-side (no syntax
+	// highlighting there anyway) — drops shiki from the server bundle.
+	define: {
+		__ENABLE_CARTA_SSR_HIGHLIGHTER__: false
+	},
 	plugins: [
 		tailwindcss(),
 		sveltekit({

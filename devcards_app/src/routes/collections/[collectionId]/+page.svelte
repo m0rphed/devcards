@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { PreRendered } from 'carta-md';
 	import CardForm from '$lib/components/CardForm.svelte';
 	import type { ActionData, PageServerData } from './$types';
 
@@ -230,20 +231,27 @@
 							{/if}
 						</div>
 
-						{#if card.type === 'basic'}
-							{@const content = card.content as { front: string; back: string }}
-							<p class="text-sm"><span class="text-gray-500">Q:</span> {content.front}</p>
-							<p class="text-sm"><span class="text-gray-500">A:</span> {content.back}</p>
-						{:else if card.type === 'cloze'}
-							{@const content = card.content as { text: string }}
-							<p class="text-sm">{content.text}</p>
+						{#if card.rendered.kind === 'basic'}
+							<div class="prose prose-sm max-w-none">
+								<span class="text-xs text-gray-500">Q:</span>
+								<PreRendered html={card.rendered.frontHtml} />
+							</div>
+							<div class="prose prose-sm max-w-none">
+								<span class="text-xs text-gray-500">A:</span>
+								<PreRendered html={card.rendered.backHtml} />
+							</div>
+						{:else if card.rendered.kind === 'cloze'}
+							<div class="prose prose-sm max-w-none">
+								<PreRendered html={card.rendered.revealedHtml} />
+							</div>
 						{:else}
-							{@const content = card.content as { question: string; options: string[]; correct_index: number }}
-							<p class="text-sm">{content.question}</p>
+							<div class="prose prose-sm max-w-none">
+								<PreRendered html={card.rendered.questionHtml} />
+							</div>
 							<ul class="mt-1 text-sm">
-								{#each content.options as option, i}
-									<li class={i === content.correct_index ? 'font-medium text-green-700' : 'text-gray-600'}>
-										{i === content.correct_index ? '✓' : '—'}
+								{#each card.rendered.options as option, i}
+									<li class={i === card.rendered.correctIndex ? 'font-medium text-green-700' : 'text-gray-600'}>
+										{i === card.rendered.correctIndex ? '✓' : '—'}
 										{option}
 									</li>
 								{/each}

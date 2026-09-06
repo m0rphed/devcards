@@ -1,3 +1,11 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
+
+/* carta-md (markdown editor): required, or the code-input pane has no font. */
+.carta-font-code {
+	font-family: ui-monospace, 'SF Mono', Consolas, monospace;
+	font-size: 0.9rem;
+	line-height: 1.4rem;
+	letter-spacing: normal;
+}

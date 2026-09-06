@@ -20,7 +20,8 @@
 		     back up immediately, and we still need a fresh component instance
 		     so its local "revealed" state resets. -->
 		{#key data.loadKey}
-			<StudyCardView card={data.card} remaining={data.remaining} />
+			<!-- rendered is computed alongside card in load — non-null exactly when card is (see +page.server.ts) -->
+			<StudyCardView card={data.card} rendered={data.rendered!} remaining={data.remaining} />
 		{/key}
 	{/if}
 </div>

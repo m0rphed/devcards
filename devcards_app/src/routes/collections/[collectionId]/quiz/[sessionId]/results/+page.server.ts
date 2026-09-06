@@ -2,6 +2,7 @@ import { error } from '@sveltejs/kit';
 import { getCollectionAccess } from '$lib/server/authz';
 import { requireUser } from '$lib/server/require-user';
 import { getSessionResults } from '$lib/server/quiz';
+import { renderCard } from '$lib/server/render-card';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async (event) => {
@@ -14,5 +15,9 @@ export const load: PageServerLoad = async (event) => {
 	const results = await getSessionResults(sessionId, currentUser.id);
 	if (!results || results.session.collectionId !== collectionId) error(404, 'Сессия не найдена');
 
-	return { collection, ...results };
+	return {
+		collection,
+		session: results.session,
+		attempts: results.attempts.map((a) => ({ ...a, rendered: renderCard(a.card.type, a.card.content) }))
+	};
 };

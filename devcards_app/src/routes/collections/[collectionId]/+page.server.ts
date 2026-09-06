@@ -15,6 +15,7 @@ import { listCollectionCards } from '$lib/server/card-search';
 import { parseCardContent } from '$lib/server/card-content';
 import { requireUser } from '$lib/server/require-user';
 import { getTagNamesByCard, parseTagNames, setCardTags } from '$lib/server/tags';
+import { renderCard } from '$lib/server/render-card';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async (event) => {
@@ -53,7 +54,7 @@ export const load: PageServerLoad = async (event) => {
 	return {
 		collection,
 		role,
-		cards: collectionCards,
+		cards: collectionCards.map((card) => ({ ...card, rendered: renderCard(card.type, card.content) })),
 		tagsByCard: Object.fromEntries(tagsByCard),
 		allTags: collectionTags.map((t) => t.name),
 		searchQuery: searchQuery ?? '',

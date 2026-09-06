@@ -1,5 +1,8 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { MarkdownEditor } from 'carta-md';
+	import 'carta-md/default.css';
+	import { carta } from '$lib/markdown';
 
 	type CardType = 'basic' | 'cloze' | 'multiple_choice';
 	type CardContent =
@@ -76,48 +79,32 @@
 	</label>
 
 	{#if type === 'basic'}
-		<label class="block text-sm">
-			Лицевая сторона
-			<textarea
-				name="front"
-				bind:value={front}
-				required
-				rows="2"
-				class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-			></textarea>
-		</label>
-		<label class="block text-sm">
-			Обратная сторона
-			<textarea
-				name="back"
-				bind:value={back}
-				required
-				rows="2"
-				class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-			></textarea>
-		</label>
+		<div class="text-sm">
+			<span>Лицевая сторона (markdown)</span>
+			<div class="mt-1">
+				<MarkdownEditor {carta} bind:value={front} mode="tabs" textarea={{ name: 'front', required: true }} />
+			</div>
+		</div>
+		<div class="text-sm">
+			<span>Обратная сторона (markdown)</span>
+			<div class="mt-1">
+				<MarkdownEditor {carta} bind:value={back} mode="tabs" textarea={{ name: 'back', required: true }} />
+			</div>
+		</div>
 	{:else if type === 'cloze'}
-		<label class="block text-sm">
-			Текст с пропуском (например: «горутины дешевле, чем {'{{c1::потоки ОС}}'}»)
-			<textarea
-				name="text"
-				bind:value={clozeText}
-				required
-				rows="3"
-				class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-			></textarea>
-		</label>
+		<div class="text-sm">
+			<span>Текст с пропуском (например: «горутины дешевле, чем {'{{c1::потоки ОС}}'}», markdown)</span>
+			<div class="mt-1">
+				<MarkdownEditor {carta} bind:value={clozeText} mode="tabs" textarea={{ name: 'text', required: true }} />
+			</div>
+		</div>
 	{:else}
-		<label class="block text-sm">
-			Вопрос
-			<textarea
-				name="question"
-				bind:value={question}
-				required
-				rows="2"
-				class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-			></textarea>
-		</label>
+		<div class="text-sm">
+			<span>Вопрос (markdown)</span>
+			<div class="mt-1">
+				<MarkdownEditor {carta} bind:value={question} mode="tabs" textarea={{ name: 'question', required: true }} />
+			</div>
+		</div>
 		<div class="flex flex-col gap-2">
 			<span class="text-sm">Варианты ответа (отметь правильный)</span>
 			{#each options as _, i}

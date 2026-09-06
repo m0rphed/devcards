@@ -5,6 +5,7 @@ import { cards } from '$lib/server/db/domain.schema';
 import { getCollectionAccess } from '$lib/server/authz';
 import { requireUser } from '$lib/server/require-user';
 import { getAnsweredCount, getNextQuizCard, getSession, submitAnswer } from '$lib/server/quiz';
+import { renderCard } from '$lib/server/render-card';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async (event) => {
@@ -22,11 +23,12 @@ export const load: PageServerLoad = async (event) => {
 	if (!card) redirect(302, `/collections/${collectionId}/quiz/${sessionId}/results`);
 
 	const answeredSoFar = await getAnsweredCount(sessionId);
+	const rendered = renderCard(card.type, card.content);
 
 	// Fresh key per load: a card can't repeat within one quiz session (unlike
 	// SRS "Again"), but keeping the same pattern as /study keeps this immune
 	// to the same class of stale-local-state bug either way.
-	return { collection, session, card, answeredSoFar, loadKey: crypto.randomUUID() };
+	return { collection, session, card, rendered, answeredSoFar, loadKey: crypto.randomUUID() };
 };
 
 export const actions: Actions = {
