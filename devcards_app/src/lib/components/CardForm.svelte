@@ -3,7 +3,20 @@
 	import { enhance } from '$app/forms';
 	import { MarkdownEditor } from 'carta-md';
 	import 'carta-md/default.css';
-	import { carta } from '$lib/markdown';
+	import { createEditorCarta } from '$lib/markdown';
+
+	// One Carta instance *per editor widget* — never shared, even between
+	// fields of the same form. See createEditorCarta's doc comment: Carta
+	// tracks "the currently registered editor" as instance state, so two
+	// simultaneously-mounted editors sharing one instance means the second
+	// (e.g. "back") silently steals the first's ("front") toolbar/caret
+	// targeting. Only one of these 4 is ever actually rendered at a time
+	// except front+back (both shown together for "basic"), which is exactly
+	// the case that needs this.
+	const frontCarta = createEditorCarta();
+	const backCarta = createEditorCarta();
+	const clozeCarta = createEditorCarta();
+	const questionCarta = createEditorCarta();
 
 	type CardType = 'basic' | 'cloze' | 'multiple_choice';
 	type CardContent =
@@ -90,20 +103,35 @@
 		<div class="text-sm">
 			<label for="{uid}-front">Лицевая сторона (markdown)</label>
 			<div class="mt-1">
-				<MarkdownEditor {carta} bind:value={front} mode="tabs" textarea={{ name: 'front', id: `${uid}-front`, required: true }} />
+				<MarkdownEditor
+					carta={frontCarta}
+					bind:value={front}
+					mode="tabs"
+					textarea={{ name: 'front', id: `${uid}-front`, required: true }}
+				/>
 			</div>
 		</div>
 		<div class="text-sm">
 			<label for="{uid}-back">Обратная сторона (markdown)</label>
 			<div class="mt-1">
-				<MarkdownEditor {carta} bind:value={back} mode="tabs" textarea={{ name: 'back', id: `${uid}-back`, required: true }} />
+				<MarkdownEditor
+					carta={backCarta}
+					bind:value={back}
+					mode="tabs"
+					textarea={{ name: 'back', id: `${uid}-back`, required: true }}
+				/>
 			</div>
 		</div>
 	{:else if type === 'cloze'}
 		<div class="text-sm">
 			<label for="{uid}-text">Текст с пропуском (например: «горутины дешевле, чем {'{{c1::потоки ОС}}'}», markdown)</label>
 			<div class="mt-1">
-				<MarkdownEditor {carta} bind:value={clozeText} mode="tabs" textarea={{ name: 'text', id: `${uid}-text`, required: true }} />
+				<MarkdownEditor
+					carta={clozeCarta}
+					bind:value={clozeText}
+					mode="tabs"
+					textarea={{ name: 'text', id: `${uid}-text`, required: true }}
+				/>
 			</div>
 		</div>
 	{:else}
@@ -111,7 +139,7 @@
 			<label for="{uid}-question">Вопрос (markdown)</label>
 			<div class="mt-1">
 				<MarkdownEditor
-					{carta}
+					carta={questionCarta}
 					bind:value={question}
 					mode="tabs"
 					textarea={{ name: 'question', id: `${uid}-question`, required: true }}
