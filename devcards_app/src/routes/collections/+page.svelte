@@ -234,7 +234,7 @@
 
 	<div>
 		<h2 class="mb-3 text-lg font-semibold">Публичные коллекции</h2>
-		<form method="get" class="mb-3 flex gap-2">
+		<form method="get" class="mb-6 flex gap-2">
 			<input
 				type="search"
 				name="q"

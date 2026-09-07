@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { Check, X } from '@lucide/svelte';
 	import { PreRendered } from 'carta-md';
 	import Flashcard from '$lib/components/ui/Flashcard.svelte';
 	import { createFlashcardFlip } from '$lib/components/ui/useFlashcard.svelte';
@@ -94,21 +95,27 @@
 		</button>
 	</form>
 {:else}
-	<form method="post" action="?/answer" use:enhance class="flex gap-2">
+	<!-- Sized to content (not flex-1/full-width) and centered — a plain
+	     yes/no pair reads as oversized when stretched across a card-width
+	     row; an icon carries most of the meaning at a glance, the label is
+	     there for clarity/screen readers rather than to fill space. -->
+	<form method="post" action="?/answer" use:enhance class="flex justify-center gap-3">
 		<input type="hidden" name="cardId" value={card.id} />
 		<input type="hidden" name="typedAnswer" value={typedAnswer} />
 		<button
 			name="selfReported"
 			value="incorrect"
-			class="flex-1 rounded-md bg-red-600 py-2 text-sm text-white hover:bg-red-700"
+			class="flex items-center gap-1.5 rounded-md bg-red-600 px-5 py-2 text-sm text-white hover:bg-red-700"
 		>
+			<X class="size-4" aria-hidden="true" />
 			Неверно
 		</button>
 		<button
 			name="selfReported"
 			value="correct"
-			class="flex-1 rounded-md bg-green-600 py-2 text-sm text-white hover:bg-green-700"
+			class="flex items-center gap-1.5 rounded-md bg-green-600 px-5 py-2 text-sm text-white hover:bg-green-700"
 		>
+			<Check class="size-4" aria-hidden="true" />
 			Верно
 		</button>
 	</form>
