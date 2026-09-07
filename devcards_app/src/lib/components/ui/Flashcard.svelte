@@ -37,39 +37,47 @@
 		() => flipHook ?? createFlashcardFlip({ flipDirection, manualFlip, disableFlip, onFlip })
 	);
 
-	// --- Structural technique ported from react-quizlet-flashcard
-	// (https://github.com/ABSanthosh/react-quizlet-flashcard) — this is the
-	// part that actually matters and was the whole point of porting rather
-	// than continuing to patch a from-scratch version: BOTH faces are
-	// always in the DOM (not conditionally swapped), .flashcard itself
-	// declares `transform-style: preserve-3d`, and each face has
-	// `backface-visibility: hidden`. With preserve-3d present, the browser
-	// correctly composes the face's own fixed counter-rotation with the
-	// parent's live rotation into one real 3D space, so whichever face is
-	// actually facing the viewer at any given moment is the one shown —
-	// no JS "which face is showing" bookkeeping needed at all. (The
-	// from-scratch version's bugs were exactly downstream of not having
-	// this: content swapped on a plain reactive value instead of an
-	// animated one, and then, once that was fixed, the shown face still got
-	// hidden outright because its rotation was evaluated in an isolated,
-	// un-composed 3D context — preserve-3d is the missing piece both times.)
+	// --- Rendering technique ---
+	// This app originally ported react-quizlet-flashcard's real 3D flip
+	// (both faces always in the DOM, rotated on a `transform-style:
+	// preserve-3d` parent, culled via `backface-visibility: hidden`). That
+	// technique broke in production *twice* with the classic real-3D-gone-
+	// wrong signature: mirrored, overlapping text — both faces painting at
+	// once because the browser flattened the 3D context instead of composing
+	// it the way the reference (and every textbook writeup of the technique)
+	// assumes. It looked right in headless Chromium both times, which is
+	// exactly the trap: `backface-visibility`/`preserve-3d` interaction is
+	// notoriously inconsistent across real engines and even real Chrome
+	// builds depending on ancestor properties, and there is no way to assert
+	// against that from a test — the whole point of that CSS is to do
+	// something JS can't observe.
 	//
-	// What's genuinely different from the reference: it flips as a single
-	// discrete jump (a CSS class toggle, `transition: transform 0.45s`).
-	// This app wanted the flip to track a live drag like turning a real
-	// page, which needs the rotation itself to be a continuous, readable
-	// value — so it's driven by a Spring instead, applied as an actual
-	// `transform` string rather than the reference's `data-flip`/`data-dir`
-	// attribute-selected `!important` rules.
+	// So this drops real 3D entirely. Only ONE face is ever in the DOM at a
+	// time — there is nothing to backface-cull because there's nothing to
+	// hide. The flip illusion is a 2D squash: the card scales down to zero
+	// width (or height, for a vertical flipDirection) and back up, and the
+	// face is swapped at the exact zero-width instant, which is invisible.
+	// Because the swap and the squash are both driven off the same spring
+	// value, they can't desync the way the from-scratch version's plain
+	// reactive swap + separate CSS transition did (that was the *first*
+	// production bug, before the 3D one). This can't look quite as
+	// "physically real" as a true rotation, but it can't mis-render, either
+	// — which, after two rounds of a technically-correct-on-paper 3D
+	// approach failing in the field, is worth more right now.
 
 	const isHorizontal = $derived(hook.flipDirection === 'ltr' || hook.flipDirection === 'rtl');
-	const rotateAxis = $derived(isHorizontal ? 'Y' : 'X');
-	const sign = $derived(hook.flipDirection === 'rtl' || hook.flipDirection === 'tb' ? -1 : 1);
 
 	// 0 = front showing, 1 = back — continuous so a live drag can track the
-	// pointer, unlike the reference's plain front/back toggle.
+	// pointer, and so content-swap and the visual squash share one clock.
 	const progress = new Spring(untrack(() => (hook.state === 'back' ? 1 : 0)), untrack(() => ({ stiffness, damping })));
 	const offsetYSpring = new Spring(0, { stiffness: 0.3, damping: 0.85 });
+
+	// |cos(progress·π)|: 1 at progress 0 or 1 (flat, fully showing), 0 at
+	// progress 0.5 (edge-on) — the squash curve driving the visible scale.
+	const scale = $derived(Math.abs(Math.cos(progress.current * Math.PI)));
+	// Which face is actually in the DOM right now — swapping at the halfway
+	// point means it happens exactly when scale is ~0, i.e. invisible.
+	const showingBack = $derived(progress.current >= 0.5);
 
 	let dragging = $state(false);
 	let axis: 'flip' | 'skip' | null = null;
@@ -79,32 +87,6 @@
 	let startTime = 0;
 	let pointerId: number | null = null;
 	let root: HTMLDivElement;
-	let frontEl: HTMLDivElement;
-	let backEl: HTMLDivElement;
-
-	// Unlike the reference's fixed-size cards (it expects the caller to size
-	// .flashcard-wrapper explicitly), this app's card content is arbitrary
-	// rendered markdown of unpredictable height — and the back face is
-	// absolutely positioned (needed so it doesn't drag the wrapper's own
-	// height along when it happens to be taller than the front), so nothing
-	// else would size the wrapper to fit it. Measure both faces live and
-	// keep the wrapper tall enough for whichever is bigger.
-	let frontHeight = $state(0);
-	let backHeight = $state(0);
-	const minHeight = $derived(Math.max(frontHeight, backHeight));
-
-	$effect(() => {
-		const observer = new ResizeObserver((entries) => {
-			for (const entry of entries) {
-				const height = entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height;
-				if (entry.target === frontEl) frontHeight = height;
-				else if (entry.target === backEl) backHeight = height;
-			}
-		});
-		observer.observe(frontEl);
-		observer.observe(backEl);
-		return () => observer.disconnect();
-	});
 
 	$effect(() => {
 		if (!dragging) progress.target = hook.state === 'back' ? 1 : 0;
@@ -200,36 +182,29 @@
 	class="flashcard-wrapper"
 	class:flying
 	class:flashcard-wrapper--disabled={hook.disableFlip}
-	style:min-height="{minHeight}px"
+	style:transform="translateY({flying ? -140 : offsetYSpring.current}{flying ? '%' : 'px'})"
 	onpointerdown={onPointerDown}
 	onpointermove={onPointerMove}
 	onpointerup={onPointerUp}
 	onpointercancel={settle}
 	onclick={onClick}
 >
-	<div
-		class="flashcard"
-		style:transform="translateY({flying ? -140 : offsetYSpring.current}{flying
-			? '%'
-			: 'px'}) rotate{rotateAxis}({sign * 180 * progress.current}deg)"
-	>
-		<div bind:this={frontEl} class="flashcard__face flashcard__front">
-			{@render front()}
-		</div>
-		<div
-			bind:this={backEl}
-			class="flashcard__face flashcard__back"
-			style:transform="rotate{rotateAxis}({sign * 180}deg)"
-		>
-			{@render back()}
-		</div>
+	<div class="flashcard" style:transform={isHorizontal ? `scaleX(${scale})` : `scaleY(${scale})`}>
+		{#if showingBack}
+			<div class="flashcard__face">
+				{@render back()}
+			</div>
+		{:else}
+			<div class="flashcard__face">
+				{@render front()}
+			</div>
+		{/if}
 	</div>
 </div>
 
 <style>
 	.flashcard-wrapper {
 		position: relative;
-		perspective: 1400px;
 		cursor: pointer;
 		/* We handle both drag axes ourselves via pointer events — don't let
 		   the browser's own touch scrolling/panning fight the gesture. */
@@ -239,29 +214,17 @@
 	.flashcard-wrapper--disabled {
 		cursor: default;
 	}
-	.flashcard {
-		position: relative;
-		width: 100%;
-		/* The one structural property the from-scratch version was missing
-		   both times — without it, a face's own counter-rotation is
-		   evaluated in isolation from this element's rotation instead of
-		   composed with it in one real 3D space. */
-		transform-style: preserve-3d;
-	}
 	.flying .flashcard {
-		/* The inline transform (see the template) switches to a fixed
-		   fly-away value the instant `flying` becomes true — this transition
-		   is what actually animates that jump instead of snapping to it. */
 		transition:
 			transform 0.22s ease-in,
 			opacity 0.22s ease-in;
 		opacity: 0;
 	}
 	.flashcard__face {
-		backface-visibility: hidden;
-	}
-	.flashcard__back {
-		position: absolute;
-		inset: 0;
+		/* The squash only ever fully hides content at the exact zero-width
+		   instant (where the face is also swapped) — everywhere else it's a
+		   partially-squeezed but otherwise fully painted, non-mirrored view
+		   of whichever single face is currently mounted. */
+		width: 100%;
 	}
 </style>

@@ -43,15 +43,11 @@ function drag(el: Element, path: { x: number; y: number }[]) {
 
 describe('Flashcard', () => {
 	test('regression: the settled back face is actually painted, not just present in the DOM', async () => {
-		// The bug this guards against shipped twice: both times, every other
-		// test in this file (and the from-scratch FlipCard's equivalent
-		// tests) passed via toBeVisible()/backfaceVisibility computed-style
-		// checks despite the card being genuinely blank on screen — neither
-		// check reflects actual 3D backface culling, which happens purely in
-		// the rendering pipeline and isn't exposed to script. A real
-		// screenshot, decoded pixel-by-pixel, is the only check that can't
-		// be fooled by that: front is solid red, back is solid blue, and
-		// after flipping, the dominant color must actually be blue.
+		// A real screenshot, decoded pixel-by-pixel, is the check that can't
+		// be fooled by toBeVisible()/computed-style checks (neither reflects
+		// actual rendering — see the DOM-cardinality test below for why this
+		// alone isn't enough either): front is solid red, back is solid blue,
+		// and after flipping, the dominant color must actually be blue.
 		const screen = render(Flashcard, { front: textSnippet('F', 'red'), back: textSnippet('B', 'blue') });
 		await new Promise((r) => setTimeout(r, 50));
 
@@ -63,6 +59,37 @@ describe('Flashcard', () => {
 
 		const backShot = (await screen.getByTestId('B').screenshot({ base64: true })) as unknown as { base64: string };
 		expect(await decodePngDominantColor(backShot.base64)).toBe('0,0,255');
+	});
+
+	test('regression: never more than one face mounted at once, mid-flip included', async () => {
+		// This is the check that actually would have caught the production
+		// bug the *previous* implementation shipped: a real 3D flip (both
+		// faces always in the DOM, culled via backface-visibility on a
+		// preserve-3d parent) rendered correctly in this test suite —
+		// including the pixel-level screenshot test above, since that used
+		// solid opaque backgrounds and an opaque top face simply paints over
+		// whatever's underneath regardless of whether the bottom one was
+		// ever actually culled. In production, on a real browser, the 3D
+		// context didn't compose the way the technique assumes, and *both*
+		// faces painted at once — with real (non-opaque-block) content, that
+		// showed up as mirrored, overlapping text. Solid-color screenshots
+		// structurally cannot detect "two things painted, one on top of the
+		// other" when the top one is opaque. A DOM-cardinality check can: the
+		// current implementation only ever mounts one face element, so
+		// there's nothing to overlap by construction — assert that
+		// invariant directly, including mid-animation (not just settled),
+		// since that's exactly when the old bug's overlap was visible.
+		const screen = render(Flashcard, { front: textSnippet('Front'), back: textSnippet('Back') });
+		const countFaces = () => screen.container.querySelectorAll('.flashcard__face').length;
+
+		expect(countFaces()).toBe(1);
+		await screen.getByText('Front').click();
+		for (let i = 0; i < 8; i++) {
+			await new Promise((r) => setTimeout(r, 40)); // sample repeatedly through the settle animation
+			expect(countFaces()).toBe(1);
+		}
+		await new Promise((r) => setTimeout(r, 500)); // let it fully settle
+		expect(countFaces()).toBe(1);
 	});
 
 	test('clicking the card flips it', async () => {
