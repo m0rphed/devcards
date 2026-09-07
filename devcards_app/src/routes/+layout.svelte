@@ -19,7 +19,7 @@
 		<a href="/collections" class="font-semibold text-gray-900">devcards</a>
 		{#if data.user}
 			<div class="flex items-center gap-3 text-sm text-gray-600">
-				<span>{data.user.name}</span>
+				<a href="/settings" class="hover:underline">{data.user.name}</a>
 				<form method="post" action="/logout">
 					<button class="text-blue-600 hover:underline">Выйти</button>
 				</form>

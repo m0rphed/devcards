@@ -14,7 +14,9 @@ import {
 	primaryKey,
 	check,
 	pgView,
-	bigint
+	bigint,
+	smallint,
+	type AnyPgColumn
 } from 'drizzle-orm/pg-core';
 import { user } from './auth.schema';
 import { citext, tsvector, bytea } from './custom-types';
@@ -53,6 +55,19 @@ export const collections = pgTable(
 		title: text('title').notNull(),
 		description: text('description'),
 		isPublic: boolean('is_public').notNull().default(false),
+		// Set once, at fork time (see $lib/server/collections.ts's forkCollection)
+		// — never on a plain collection. `SET NULL`, deliberately unlike every
+		// other FK in this file: a fork must stay fully usable even after its
+		// source is deleted, so losing only this provenance breadcrumb is the
+		// intended degradation, not a bug (see phase02.social_features.md).
+		forkedFromCollectionId: uuid('forked_from_collection_id').references((): AnyPgColumn => collections.id, {
+			onDelete: 'set null'
+		}),
+		// Snapshot of the source's `updated_at` at fork time — compared against
+		// its *current* updated_at to answer "has the original changed since I
+		// forked it". See the cards_touch_collection trigger (custom migration)
+		// for why editing a card now updates this column at all.
+		forkedFromUpdatedAt: timestamp('forked_from_updated_at', { withTimezone: true }),
 		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 		updatedAt: timestamp('updated_at', { withTimezone: true })
 			.defaultNow()
@@ -90,6 +105,71 @@ export const collectionAccess = pgTable(
 		index('collection_access_user_idx').on(table.userId)
 	]
 );
+
+// Flat (no threading) comments on a collection — visible/postable by anyone
+// who can currently view it (owner, explicit share, or public), same rule
+// `getCollectionAccess` already uses elsewhere; not restricted to
+// subscribers only.
+export const collectionComments = pgTable(
+	'collection_comments',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		collectionId: uuid('collection_id')
+			.notNull()
+			.references(() => collections.id, { onDelete: 'cascade' }),
+		authorId: text('author_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		body: text('body').notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+		updatedAt: timestamp('updated_at', { withTimezone: true })
+			.defaultNow()
+			.$onUpdate(() => new Date())
+			.notNull()
+	},
+	(table) => [index('collection_comments_collection_idx').on(table.collectionId, table.createdAt)]
+);
+
+// One row per (collection, user) — same upsert-on-composite-PK shape as
+// review_state: rating a collection again just replaces your previous one.
+export const collectionRatings = pgTable(
+	'collection_ratings',
+	{
+		collectionId: uuid('collection_id')
+			.notNull()
+			.references(() => collections.id, { onDelete: 'cascade' }),
+		userId: text('user_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		rating: smallint('rating').notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+	},
+	(table) => [
+		primaryKey({ columns: [table.collectionId, table.userId] }),
+		check('collection_ratings_rating_check', sql`${table.rating} BETWEEN 1 AND 5`)
+	]
+);
+
+// Aggregate per collection — a plain VIEW, not a function like
+// collection_progress: unlike "what's due for *this* user", an average
+// rating isn't parameterized by who's asking, so it can be computed once
+// and joined straight into the public-collections listing.
+export const collectionRatingSummary = pgView('collection_rating_summary', {
+	collectionId: uuid('collection_id').notNull(),
+	avgRating: real('avg_rating').notNull(),
+	ratingCount: bigint('rating_count', { mode: 'number' }).notNull()
+}).as(sql`
+	select ${collectionRatings.collectionId} as collection_id,
+		-- avg() over smallint naturally comes back as numeric, which
+		-- postgres-js returns as a string (no precision loss) — cast to
+		-- match the real() builder above so it round-trips as an actual
+		-- number, same reasoning as review_activity_daily's explicit
+		-- column builders (see the comment there).
+		avg(${collectionRatings.rating})::real as avg_rating,
+		count(*) as rating_count
+	from ${collectionRatings}
+	group by ${collectionRatings.collectionId}
+`);
 
 export const cards = pgTable(
 	'cards',

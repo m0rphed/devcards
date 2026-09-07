@@ -81,11 +81,43 @@
 		{:else}
 			<ul class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 				{#each data.publicOnes as c (c.id)}
-					<li class="rounded-md border border-gray-200 p-4 hover:border-gray-300">
+					<li class="flex flex-col gap-2 rounded-md border border-gray-200 p-4 hover:border-gray-300">
 						<a href="/collections/{c.id}" class="font-medium text-gray-900">{c.title}</a>
 						{#if c.description}
-							<p class="mt-1 text-sm text-gray-500">{c.description}</p>
+							<p class="text-sm text-gray-500">{c.description}</p>
 						{/if}
+						<div class="flex items-center gap-2 text-xs text-gray-500">
+							<a href="/users/{c.ownerId}" class="flex items-center gap-1 hover:underline">
+								{#if c.ownerImage}
+									<img src={c.ownerImage} alt="" class="h-4 w-4 rounded-full object-cover" />
+								{/if}
+								{c.ownerName}
+							</a>
+							{#if c.rating}
+								<span>★ {c.rating.avgRating.toFixed(1)} ({c.rating.ratingCount})</span>
+							{/if}
+						</div>
+						<div class="flex gap-2 text-xs">
+							{#if c.subscribed}
+								<form method="post" action="?/leave" use:enhance>
+									<input type="hidden" name="collectionId" value={c.id} />
+									<button class="rounded bg-gray-100 px-2 py-1 text-gray-700 hover:bg-gray-200">Отписаться</button>
+								</form>
+							{:else}
+								<form method="post" action="?/subscribe" use:enhance>
+									<input type="hidden" name="collectionId" value={c.id} />
+									<button class="rounded bg-gray-100 px-2 py-1 text-gray-700 hover:bg-gray-200">Добавить себе</button>
+								</form>
+							{/if}
+							{#if c.forked}
+								<span class="rounded bg-gray-50 px-2 py-1 text-gray-400">уже скопировано</span>
+							{:else}
+								<form method="post" action="?/fork" use:enhance>
+									<input type="hidden" name="collectionId" value={c.id} />
+									<button class="rounded bg-gray-100 px-2 py-1 text-gray-700 hover:bg-gray-200">Скопировать себе</button>
+								</form>
+							{/if}
+						</div>
 					</li>
 				{/each}
 			</ul>

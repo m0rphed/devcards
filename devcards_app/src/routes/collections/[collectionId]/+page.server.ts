@@ -16,7 +16,10 @@ import { parseCardContent } from '$lib/server/card-content';
 import { requireUser } from '$lib/server/require-user';
 import { getTagNamesByCard, parseTagNames, setCardTags } from '$lib/server/tags';
 import { renderCard } from '$lib/server/render-card';
-import { getCollectionProgress } from '$lib/server/stats';
+import { getCardDeletionImpacts, getCollectionDeletionImpact, getCollectionProgress } from '$lib/server/stats';
+import { forkCollection, leaveCollection, subscribeToPublicCollection } from '$lib/server/collections';
+import { addComment, deleteComment, getComment, listComments } from '$lib/server/comments';
+import { getMyRating, getRatingSummary, rateCollection, removeRating } from '$lib/server/ratings';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async (event) => {
@@ -52,18 +55,69 @@ export const load: PageServerLoad = async (event) => {
 					.where(eq(collectionAccess.collectionId, collectionId))
 			: [];
 
+	// Explicit self/owner-granted access row, distinct from "can view because
+	// it's public" — that's what the Subscribe/Unsubscribe button state
+	// needs (role alone can't tell them apart: a public collection's viewer
+	// role is the same either way).
+	const isSubscribed =
+		role !== 'owner' &&
+		(await db
+			.select({ userId: collectionAccess.userId })
+			.from(collectionAccess)
+			.where(and(eq(collectionAccess.collectionId, collectionId), eq(collectionAccess.userId, currentUser.id)))
+			.limit(1)
+			.then((rows) => rows.length > 0));
+
+	let forkSource: { title: string; isStale: boolean } | null = null;
+	if (collection.forkedFromCollectionId) {
+		const [source] = await db
+			.select({ title: collections.title, updatedAt: collections.updatedAt })
+			.from(collections)
+			.where(eq(collections.id, collection.forkedFromCollectionId))
+			.limit(1);
+		// Source itself was deleted since — forked_from_collection_id went
+		// NULL via ON DELETE SET NULL, so `source` here being undefined only
+		// happens in the instant between that and this read; treat it as "no
+		// longer trackable" rather than stale.
+		if (source) {
+			forkSource = {
+				title: source.title,
+				isStale: collection.forkedFromUpdatedAt !== null && source.updatedAt > collection.forkedFromUpdatedAt
+			};
+		}
+	}
+
+	const cardStudierCounts = canEdit(role)
+		? await getCardDeletionImpacts(
+				collectionCards.map((c) => c.id),
+				currentUser.id
+			)
+		: new Map<string, number>();
+
 	return {
 		collection,
 		role,
+		myUserId: currentUser.id,
 		cards: await Promise.all(
-			collectionCards.map(async (card) => ({ ...card, rendered: await renderCard(card.type, card.content) }))
+			collectionCards.map(async (card) => ({
+				...card,
+				rendered: await renderCard(card.type, card.content),
+				otherStudierCount: cardStudierCounts.get(card.id) ?? 0
+			}))
 		),
 		tagsByCard: Object.fromEntries(tagsByCard),
 		allTags: collectionTags.map((t) => t.name),
 		searchQuery: searchQuery ?? '',
 		tagFilter: tagFilter ?? '',
 		shares,
-		progress: await getCollectionProgress(collectionId, currentUser.id)
+		progress: await getCollectionProgress(collectionId, currentUser.id),
+		deletionImpact:
+			role === 'owner' ? await getCollectionDeletionImpact(collectionId, currentUser.id) : null,
+		isSubscribed,
+		forkSource,
+		comments: await listComments(collectionId),
+		ratingSummary: await getRatingSummary(collectionId),
+		myRating: await getMyRating(collectionId, currentUser.id)
 	};
 };
 
@@ -183,5 +237,75 @@ export const actions: Actions = {
 		await db
 			.delete(collectionAccess)
 			.where(and(eq(collectionAccess.collectionId, collectionId), eq(collectionAccess.userId, targetUserId)));
+	},
+
+	subscribe: async (event) => {
+		const currentUser = requireUser(event);
+		const { collectionId } = event.params;
+		const { collection } = await getCollectionAccess(collectionId, currentUser.id);
+		if (!collection?.isPublic) error(404, 'Коллекция не найдена');
+		await subscribeToPublicCollection(collectionId, currentUser.id);
+	},
+
+	leave: async (event) => {
+		const currentUser = requireUser(event);
+		const { collectionId } = event.params;
+		await leaveCollection(collectionId, currentUser.id);
+		redirect(303, '/collections');
+	},
+
+	fork: async (event) => {
+		const currentUser = requireUser(event);
+		const { collectionId } = event.params;
+		const { role } = await getCollectionAccess(collectionId, currentUser.id);
+		if (role === null) error(404, 'Коллекция не найдена');
+		const forked = await forkCollection(collectionId, currentUser.id);
+		redirect(303, `/collections/${forked.id}`);
+	},
+
+	addComment: async (event) => {
+		const currentUser = requireUser(event);
+		const { collectionId } = event.params;
+		const { role } = await getCollectionAccess(collectionId, currentUser.id);
+		if (role === null) error(404, 'Коллекция не найдена');
+
+		const body = (await event.request.formData()).get('body')?.toString() ?? '';
+		if (!body.trim()) return fail(400, { message: 'Комментарий не может быть пустым' });
+		await addComment(collectionId, currentUser.id, body);
+	},
+
+	deleteComment: async (event) => {
+		const currentUser = requireUser(event);
+		const { collectionId } = event.params;
+		const { role } = await getCollectionAccess(collectionId, currentUser.id);
+
+		const commentId = (await event.request.formData()).get('commentId')?.toString();
+		if (!commentId) return fail(400, { message: 'commentId обязателен' });
+
+		const comment = await getComment(commentId);
+		if (!comment || comment.collectionId !== collectionId) error(404, 'Комментарий не найден');
+		// Own comment, or the collection's owner moderating — not editors: an
+		// editor's write access to *cards* doesn't imply moderation rights
+		// over other people's comments.
+		if (comment.authorId !== currentUser.id && role !== 'owner') error(403, 'Нет прав на удаление этого комментария');
+
+		await deleteComment(commentId);
+	},
+
+	rate: async (event) => {
+		const currentUser = requireUser(event);
+		const { collectionId } = event.params;
+		const { role } = await getCollectionAccess(collectionId, currentUser.id);
+		if (role === null) error(404, 'Коллекция не найдена');
+
+		const rating = Number((await event.request.formData()).get('rating'));
+		if (!Number.isInteger(rating) || rating < 1 || rating > 5) return fail(400, { message: 'Оценка должна быть 1-5' });
+		await rateCollection(collectionId, currentUser.id, rating);
+	},
+
+	unrate: async (event) => {
+		const currentUser = requireUser(event);
+		const { collectionId } = event.params;
+		await removeRating(collectionId, currentUser.id);
 	}
 };

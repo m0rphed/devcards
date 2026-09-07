@@ -29,6 +29,20 @@
       "when": 1788728269884,
       "tag": "0003_add_collection_progress_function",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788776222045,
+      "tag": "0004_bizarre_scrambler",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788776304960,
+      "tag": "0005_add_cards_touch_collection_trigger",
+      "breakpoints": true
     }
   ]
 }

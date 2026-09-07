@@ -1,6 +1,6 @@
-import { and, desc, eq, gte, sql } from 'drizzle-orm';
+import { and, countDistinct, desc, eq, gte, inArray, ne, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
-import { reviewActivityDaily } from '$lib/server/db/domain.schema';
+import { cards, reviewActivityDaily, reviewState } from '$lib/server/db/domain.schema';
 import type { DbState } from '$lib/server/fsrs-mapping';
 
 export type CollectionProgress = { state: DbState; cardCount: number; dueCount: number };
@@ -49,4 +49,47 @@ export async function getReviewActivity(userId: string, days: number): Promise<D
 		correct: Number(r.correct),
 		incorrect: Number(r.incorrect)
 	}));
+}
+
+export type DeletionImpact = { cardCount: number; studierCount: number };
+
+/**
+ * What actually disappears if this collection is deleted right now — for
+ * the confirmation prompt, not for the delete itself (CASCADE handles the
+ * real removal, see phase02.social_features.md's "we keep CASCADE, just
+ * warn" decision). `studierCount` excludes `excludeUserId` (normally the
+ * person about to click delete) — the number that matters for a warning is
+ * *other* people's progress about to vanish, not the owner's own.
+ */
+export async function getCollectionDeletionImpact(
+	collectionId: string,
+	excludeUserId: string
+): Promise<DeletionImpact> {
+	const [row] = await db
+		.select({
+			cardCount: countDistinct(cards.id),
+			studierCount: countDistinct(reviewState.userId)
+		})
+		.from(cards)
+		.leftJoin(reviewState, and(eq(reviewState.cardId, cards.id), ne(reviewState.userId, excludeUserId)))
+		.where(eq(cards.collectionId, collectionId));
+	return row;
+}
+
+/** Same idea, batched for every card in a collection at once — one query, not one per card in the list. */
+export async function getCardDeletionImpacts(
+	cardIds: string[],
+	excludeUserId: string
+): Promise<Map<string, number>> {
+	const map = new Map<string, number>();
+	if (cardIds.length === 0) return map;
+
+	const rows = await db
+		.select({ cardId: reviewState.cardId, studierCount: countDistinct(reviewState.userId) })
+		.from(reviewState)
+		.where(and(inArray(reviewState.cardId, cardIds), ne(reviewState.userId, excludeUserId)))
+		.groupBy(reviewState.cardId);
+
+	for (const row of rows) map.set(row.cardId, row.studierCount);
+	return map;
 }

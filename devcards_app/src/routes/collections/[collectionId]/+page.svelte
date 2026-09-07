@@ -54,12 +54,37 @@
 				{#if data.collection.description}
 					<p class="mt-1 text-sm text-gray-500">{data.collection.description}</p>
 				{/if}
+				{#if data.ratingSummary}
+					<p class="mt-1 text-sm text-gray-500">★ {data.ratingSummary.avgRating.toFixed(1)} ({data.ratingSummary.ratingCount})</p>
+				{/if}
+				{#if data.forkSource}
+					<p class="mt-1 text-xs text-gray-400">
+						Скопировано из «{data.forkSource.title}»
+						{#if data.forkSource.isStale}<span class="text-amber-600">— в оригинале есть изменения</span>{/if}
+					</p>
+				{/if}
 			</div>
-			{#if isOwner}
-				<button type="button" class="text-sm text-blue-600 hover:underline" onclick={() => (showSettings = !showSettings)}>
-					{showSettings ? 'Скрыть настройки' : 'Настройки'}
-				</button>
-			{/if}
+			<div class="flex items-center gap-3">
+				{#if !isOwner && data.isSubscribed}
+					<form method="post" action="?/leave" use:enhance>
+						<button class="text-sm text-gray-600 hover:underline">Отписаться</button>
+					</form>
+				{:else if !isOwner && data.collection.isPublic}
+					<form method="post" action="?/subscribe" use:enhance>
+						<button class="text-sm text-blue-600 hover:underline">Добавить себе</button>
+					</form>
+				{/if}
+				{#if !isOwner}
+					<form method="post" action="?/fork" use:enhance>
+						<button class="text-sm text-blue-600 hover:underline">Скопировать себе</button>
+					</form>
+				{/if}
+				{#if isOwner}
+					<button type="button" class="text-sm text-blue-600 hover:underline" onclick={() => (showSettings = !showSettings)}>
+						{showSettings ? 'Скрыть настройки' : 'Настройки'}
+					</button>
+				{/if}
+			</div>
 		</div>
 
 		{#if isOwner && showSettings}
@@ -93,7 +118,12 @@
 					action="?/deleteCollection"
 					use:enhance
 					onsubmit={(e) => {
-						if (!confirm('Удалить коллекцию вместе со всеми карточками?')) e.preventDefault();
+						const impact = data.deletionImpact;
+						let msg = `Удалить коллекцию (${impact?.cardCount ?? data.cards.length} карточек)? Это необратимо.`;
+						if (impact?.studierCount) {
+							msg += ` Эту коллекцию также изучают ещё ${impact.studierCount} пользователь(ей) — их прогресс тоже будет удалён.`;
+						}
+						if (!confirm(msg)) e.preventDefault();
 					}}
 				>
 					<button class="w-fit rounded-md border border-red-300 px-4 py-1.5 text-sm text-red-600 hover:bg-red-50">
@@ -254,7 +284,11 @@
 										action="?/deleteCard"
 										use:enhance
 										onsubmit={(e) => {
-											if (!confirm('Удалить карточку?')) e.preventDefault();
+											let msg = 'Удалить карточку? Вся история повторений по ней тоже удалится.';
+											if (card.otherStudierCount > 0) {
+												msg += ` Её также изучают ещё ${card.otherStudierCount} пользователь(ей) — их прогресс тоже будет удалён.`;
+											}
+											if (!confirm(msg)) e.preventDefault();
 										}}
 									>
 										<input type="hidden" name="cardId" value={card.id} />
@@ -307,5 +341,70 @@
 				{/each}
 			</ul>
 		{/if}
+	</div>
+
+	<div class="flex flex-col gap-4 border-t border-gray-200 pt-6">
+		<div>
+			<h2 class="mb-2 text-lg font-semibold">Оценка</h2>
+			<div class="flex items-center gap-1 text-xl">
+				{#each [1, 2, 3, 4, 5] as star}
+					<form method="post" action="?/rate" use:enhance>
+						<input type="hidden" name="rating" value={star} />
+						<button
+							class={star <= (data.myRating ?? 0) ? 'text-yellow-500' : 'text-gray-300 hover:text-yellow-400'}
+							aria-label="Оценить на {star}"
+						>
+							★
+						</button>
+					</form>
+				{/each}
+				{#if data.myRating}
+					<form method="post" action="?/unrate" use:enhance>
+						<button class="ml-2 text-xs text-gray-500 hover:underline">Убрать оценку</button>
+					</form>
+				{/if}
+				{#if data.ratingSummary}
+					<span class="ml-2 text-sm text-gray-500">
+						среднее {data.ratingSummary.avgRating.toFixed(1)} ({data.ratingSummary.ratingCount})
+					</span>
+				{/if}
+			</div>
+		</div>
+
+		<div>
+			<h2 class="mb-2 text-lg font-semibold">Комментарии ({data.comments.length})</h2>
+			<form method="post" action="?/addComment" use:enhance class="mb-3 flex gap-2">
+				<input
+					name="body"
+					required
+					placeholder="Написать комментарий…"
+					class="flex-1 rounded-md border-gray-300 text-sm shadow-sm"
+				/>
+				<button class="rounded-md bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700">Отправить</button>
+			</form>
+			{#if data.comments.length > 0}
+				<ul class="flex flex-col gap-2">
+					{#each data.comments as c (c.id)}
+						<li class="rounded-md border border-gray-200 p-3 text-sm">
+							<div class="mb-1 flex items-center justify-between">
+								<a href="/users/{c.authorId}" class="flex items-center gap-1.5 font-medium text-gray-900 hover:underline">
+									{#if c.authorImage}
+										<img src={c.authorImage} alt="" class="h-5 w-5 rounded-full object-cover" />
+									{/if}
+									{c.authorName}
+								</a>
+								{#if c.authorId === data.myUserId || isOwner}
+									<form method="post" action="?/deleteComment" use:enhance>
+										<input type="hidden" name="commentId" value={c.id} />
+										<button class="text-xs text-red-600 hover:underline">Удалить</button>
+									</form>
+								{/if}
+							</div>
+							<p class="text-gray-700">{c.body}</p>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		</div>
 	</div>
 </div>
