@@ -9,6 +9,7 @@
 	import Avatar from '$lib/components/ui/Avatar.svelte';
 	import Disclosure from '$lib/components/ui/Disclosure.svelte';
 	import Select from '$lib/components/ui/Select.svelte';
+	import { CARD_COLOR_META } from '$lib/card-colors';
 	import type { ActionData, PageServerData } from './$types';
 
 	const SHARE_ROLE_OPTIONS = [
@@ -282,9 +283,21 @@
 		{:else}
 			<ul class="flex flex-col gap-2">
 				{#each data.cards as card (card.id)}
-					<li class="rounded-md border border-gray-200 p-4">
+					<li
+						class="rounded-md border border-gray-200 p-4 {card.color
+							? `border-l-4 ${CARD_COLOR_META[card.color].accent}`
+							: ''}"
+					>
 						<div class="mb-1 flex items-center justify-between">
-							<span class="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">{cardTypeLabel(card.type)}</span>
+							<div class="flex items-center gap-1.5">
+								<span class="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">{cardTypeLabel(card.type)}</span>
+								{#if card.color}
+									<span
+										class="size-2.5 rounded-full {CARD_COLOR_META[card.color].dot}"
+										aria-label={CARD_COLOR_META[card.color].label}
+									></span>
+								{/if}
+							</div>
 							{#if canEdit}
 								<div class="flex items-center gap-3 text-xs">
 									<a href="/collections/{data.collection.id}/cards/{card.id}" class="text-blue-600 hover:underline">

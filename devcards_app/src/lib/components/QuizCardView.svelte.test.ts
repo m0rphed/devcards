@@ -5,7 +5,7 @@ import type { StudyCard } from '$lib/server/srs';
 import type { RenderedCard } from '$lib/server/render-card';
 
 describe('QuizCardView (basic) — typed-answer step', () => {
-	const card: StudyCard = { id: 'card-1', type: 'basic', content: { front: 'Q', back: 'A' } };
+	const card: StudyCard = { id: 'card-1', type: 'basic', content: { front: 'Q', back: 'A' }, color: null };
 	const rendered: RenderedCard = { kind: 'basic', frontHtml: '<p>Q</p>', backHtml: '<p>A</p>' };
 
 	test('lets you type an answer before revealing — regression test for the "can\'t answer" gap', async () => {
@@ -63,7 +63,8 @@ describe('QuizCardView (multiple_choice) — no typed-answer step needed', () =>
 	const card: StudyCard = {
 		id: 'card-2',
 		type: 'multiple_choice',
-		content: { question: 'Pick one', options: ['Alpha', 'Beta'], correct_index: 0 }
+		content: { question: 'Pick one', options: ['Alpha', 'Beta'], correct_index: 0 },
+		color: null
 	};
 	const rendered: RenderedCard = {
 		kind: 'multiple_choice',

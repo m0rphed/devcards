@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { parseCardContent } from './card-content';
+import { parseCardColor, parseCardContent } from './card-content';
 
 function formData(entries: Record<string, string | string[]>): FormData {
 	const fd = new FormData();
@@ -65,5 +65,23 @@ describe('parseCardContent', () => {
 	test('rejects an unknown type', () => {
 		const result = parseCardContent(formData({ type: 'essay' }));
 		expect(result.ok).toBe(false);
+	});
+});
+
+describe('parseCardColor', () => {
+	test('accepts a known preset', () => {
+		expect(parseCardColor(formData({ color: 'blue' }))).toBe('blue');
+	});
+
+	test('treats the "no color" sentinel as null', () => {
+		expect(parseCardColor(formData({ color: 'none' }))).toBeNull();
+	});
+
+	test('treats a missing field as null', () => {
+		expect(parseCardColor(formData({}))).toBeNull();
+	});
+
+	test('treats an unrecognized value as null (not an error)', () => {
+		expect(parseCardColor(formData({ color: 'not-a-real-color' }))).toBeNull();
 	});
 });

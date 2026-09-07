@@ -8,6 +8,7 @@
 	import '@cartamd/plugin-attachment/default.css';
 	import { createEditorCarta } from '$lib/markdown';
 	import Select from '$lib/components/ui/Select.svelte';
+	import { CARD_COLORS, CARD_COLOR_META, isCardColor } from '$lib/card-colors';
 
 	const TYPE_OPTIONS = [
 		{ value: 'basic', label: 'Вопрос/ответ' },
@@ -38,6 +39,7 @@
 		formAction,
 		initialType = 'basic',
 		initialContent,
+		initialColor = null,
 		initialTags = [],
 		submitLabel = 'Сохранить',
 		onSuccess
@@ -45,6 +47,7 @@
 		formAction: string;
 		initialType?: CardType;
 		initialContent?: CardContent;
+		initialColor?: string | null;
 		initialTags?: string[];
 		submitLabel?: string;
 		onSuccess?: () => void;
@@ -74,6 +77,10 @@
 	// hidden input, and thus form submission, works in terms of strings) —
 	// converted to a number only where the actual index arithmetic needs it.
 	let correctIndex = $state(String(untrack(() => seed?.correct_index) ?? 0));
+	// 'none' rather than '' — an empty-string RadioGroup value is easy to
+	// confuse with "nothing selected"; 'none' round-trips through the form
+	// unambiguously, and parseCardColor treats it the same as absent/invalid.
+	let color = $state(untrack(() => (isCardColor(initialColor) ? initialColor : 'none')));
 	let tagsInput = $state(untrack(() => initialTags.join(', ')));
 
 	let errorMessage = $state('');
@@ -109,6 +116,36 @@
 			<Select id="{uid}-type" name="type" bind:value={type} options={TYPE_OPTIONS} />
 		</div>
 	</label>
+
+	<div class="text-sm">
+		<span id="{uid}-color-label">Цвет карточки</span>
+		<!-- display:contents: same reasoning as the correct-answer RadioGroup
+		     below — wrap every swatch for roving-focus/keyboard behavior
+		     without disturbing the flex row's own layout. -->
+		<RadioGroup.Root
+			bind:value={color}
+			name="color"
+			aria-labelledby="{uid}-color-label"
+			class="mt-1.5 contents"
+		>
+			<div class="flex flex-wrap items-center gap-2">
+				<RadioGroup.Item
+					value="none"
+					aria-label="Без цвета"
+					class="size-6 shrink-0 rounded-full border-2 border-dashed border-gray-300 bg-white data-[state=checked]:ring-2 data-[state=checked]:ring-gray-400 data-[state=checked]:ring-offset-1"
+				/>
+				{#each CARD_COLORS as c}
+					<RadioGroup.Item
+						value={c}
+						aria-label={CARD_COLOR_META[c].label}
+						class="size-6 shrink-0 rounded-full {CARD_COLOR_META[
+							c
+						].dot} data-[state=checked]:ring-2 data-[state=checked]:ring-gray-500 data-[state=checked]:ring-offset-1"
+					/>
+				{/each}
+			</div>
+		</RadioGroup.Root>
+	</div>
 
 	{#if type === 'basic'}
 		<div class="text-sm">

@@ -20,6 +20,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import { user } from './auth.schema';
 import { citext, tsvector, bytea } from './custom-types';
+import { CARD_COLORS } from '$lib/card-colors';
 
 // Attachments (card images) allow-listed here and in
 // $lib/server/attachments.ts — keep both in sync if this ever changes.
@@ -35,6 +36,9 @@ export const ATTACHMENT_MAX_BYTES = 5 * 1024 * 1024;
 
 export const collectionRole = pgEnum('collection_role', ['viewer', 'editor']);
 export const cardType = pgEnum('card_type', ['basic', 'cloze', 'multiple_choice']);
+// Values come from $lib/card-colors (the client-facing swatch picker/accent
+// styling reads the same list) so the DB constraint and the UI can't drift.
+export const cardColor = pgEnum('card_color', [...CARD_COLORS]);
 
 // Shape of `cards.content`, keyed by `cards.type`. Field names are snake_case
 // on purpose — they must match the JSON keys referenced by the CHECK
@@ -180,6 +184,9 @@ export const cards = pgTable(
 			.references(() => collections.id, { onDelete: 'cascade' }),
 		type: cardType('type').notNull(),
 		content: jsonb('content').notNull().$type<CardContent>(),
+		// Purely cosmetic, orthogonal to `type`/`content` (hence no CHECK
+		// entanglement below) — null means "no tint", the pre-existing look.
+		color: cardColor('color'),
 		// STORED generated column: recomputed by Postgres on every INSERT/UPDATE,
 		// nothing in the app layer has to remember to keep it in sync.
 		searchVector: tsvector('search_vector').generatedAlwaysAs(sql`to_tsvector('russian',

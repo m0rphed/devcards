@@ -43,6 +43,13 @@
       "when": 1788776304960,
       "tag": "0005_add_cards_touch_collection_trigger",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788801413046,
+      "tag": "0006_fuzzy_night_nurse",
+      "breakpoints": true
     }
   ]
 }

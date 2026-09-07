@@ -3,6 +3,7 @@ import { fsrs, type Grade } from 'ts-fsrs';
 import { db } from '$lib/server/db';
 import { cards, reviewLog, reviewState, type CardContent } from '$lib/server/db/domain.schema';
 import { fromFsrsCard, fsrsStateToDb, gradeToDb, toFsrsCard } from '$lib/server/fsrs-mapping';
+import type { CardColor } from '$lib/card-colors';
 
 // One scheduler instance, default parameters (FSRS-6 weights bundled with the
 // library, 90% request retention). Swap for generatorParameters({...}) later
@@ -13,6 +14,7 @@ export type StudyCard = {
 	id: string;
 	type: 'basic' | 'cloze' | 'multiple_choice';
 	content: CardContent;
+	color: CardColor | null;
 };
 
 /**
@@ -20,7 +22,7 @@ export type StudyCard = {
  * immediately), plus how many are left.
  *
  * `excludeIds` backs the study UI's "swipe up to skip" gesture (see
- * FlipCard.svelte / StudyCardView.svelte): skipping only reorders this
+ * Flashcard.svelte / StudyCardView.svelte): skipping only reorders this
  * session, it never actually shrinks the queue, so `remaining` is always
  * computed from the *full* due set, and if every remaining due card has
  * already been skipped, the exclusion is ignored rather than ending the
@@ -50,7 +52,7 @@ export async function getNextDueCard(
 
 	const excludeSet = new Set(excludeIds);
 	const { card } = rows.find((r) => !excludeSet.has(r.card.id)) ?? rows[0];
-	return { card: { id: card.id, type: card.type, content: card.content }, remaining: rows.length };
+	return { card: { id: card.id, type: card.type, content: card.content, color: card.color }, remaining: rows.length };
 }
 
 /**

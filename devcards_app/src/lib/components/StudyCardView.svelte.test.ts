@@ -4,7 +4,7 @@ import StudyCardView from './StudyCardView.svelte';
 import type { StudyCard } from '$lib/server/srs';
 import type { RenderedCard } from '$lib/server/render-card';
 
-const basicCard: StudyCard = { id: 'card-1', type: 'basic', content: { front: 'Front text', back: 'Back text' } };
+const basicCard: StudyCard = { id: 'card-1', type: 'basic', content: { front: 'Front text', back: 'Back text' }, color: null };
 const basicRendered: RenderedCard = {
 	kind: 'basic',
 	frontHtml: '<p>Front text</p>',
@@ -47,7 +47,7 @@ describe('StudyCardView (basic)', () => {
 });
 
 describe('StudyCardView (cloze)', () => {
-	const clozeCard: StudyCard = { id: 'card-2', type: 'cloze', content: { text: 'sky is {{c1::blue}}' } };
+	const clozeCard: StudyCard = { id: 'card-2', type: 'cloze', content: { text: 'sky is {{c1::blue}}' }, color: null };
 	const clozeRendered: RenderedCard = {
 		kind: 'cloze',
 		maskedHtml: '<p>sky is [...]</p>',
@@ -70,7 +70,8 @@ describe('StudyCardView (multiple_choice)', () => {
 	const mcCard: StudyCard = {
 		id: 'card-3',
 		type: 'multiple_choice',
-		content: { question: 'Pick one', options: ['A', 'B'], correct_index: 1 }
+		content: { question: 'Pick one', options: ['A', 'B'], correct_index: 1 },
+		color: null
 	};
 	const mcRendered: RenderedCard = {
 		kind: 'multiple_choice',

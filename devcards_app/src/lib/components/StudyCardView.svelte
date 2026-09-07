@@ -4,6 +4,7 @@
 	import { PreRendered } from 'carta-md';
 	import Flashcard from '$lib/components/ui/Flashcard.svelte';
 	import { createFlashcardFlip } from '$lib/components/ui/useFlashcard.svelte';
+	import { CARD_COLOR_META } from '$lib/card-colors';
 	import type { StudyCard } from '$lib/server/srs';
 	import type { RenderedCard } from '$lib/server/render-card';
 
@@ -20,6 +21,7 @@
 
 	const flipHook = createFlashcardFlip();
 	let flipped = $derived(flipHook.state === 'back');
+	let accentClass = $derived(card.color ? `border-l-4 ${CARD_COLOR_META[card.color].accent}` : '');
 </script>
 
 <div class="flex items-center justify-between">
@@ -34,7 +36,7 @@
 {#if rendered.kind === 'multiple_choice'}
 	<!-- Doesn't flip: revealing is "show a list of options below the
 	     question", not a front/back pair — the flip metaphor doesn't fit. -->
-	<div class="rounded-md border border-gray-200 p-6">
+	<div class="rounded-md border border-gray-200 p-6 {accentClass}">
 		<div class="prose max-w-none">
 			<PreRendered html={rendered.questionHtml} />
 		</div>
@@ -56,14 +58,14 @@
 {:else}
 	<Flashcard {flipHook} {onSkip}>
 		{#snippet front()}
-			<div class="h-full rounded-md border border-gray-200 p-6">
+			<div class="h-full rounded-md border border-gray-200 p-6 {accentClass}">
 				<div class="prose max-w-none">
 					<PreRendered html={rendered.kind === 'basic' ? rendered.frontHtml : rendered.maskedHtml} />
 				</div>
 			</div>
 		{/snippet}
 		{#snippet back()}
-			<div class="h-full rounded-md border border-gray-200 p-6">
+			<div class="h-full rounded-md border border-gray-200 p-6 {accentClass}">
 				<div class="prose max-w-none {rendered.kind === 'basic' ? 'text-gray-700' : ''}">
 					<PreRendered html={rendered.kind === 'basic' ? rendered.backHtml : rendered.revealedHtml} />
 				</div>

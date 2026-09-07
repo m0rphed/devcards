@@ -3,6 +3,7 @@
 	import { PreRendered } from 'carta-md';
 	import Flashcard from '$lib/components/ui/Flashcard.svelte';
 	import { createFlashcardFlip } from '$lib/components/ui/useFlashcard.svelte';
+	import { CARD_COLOR_META } from '$lib/card-colors';
 	import type { StudyCard } from '$lib/server/srs';
 	import type { RenderedCard } from '$lib/server/render-card';
 
@@ -15,6 +16,7 @@
 	// can freely flip back and forth (e.g. to re-read the question).
 	const flipHook = createFlashcardFlip({ disableFlip: true });
 	let revealed = $derived(flipHook.state === 'back');
+	let accentClass = $derived(card.color ? `border-l-4 ${CARD_COLOR_META[card.color].accent}` : '');
 	// Unlike /study (pure self-assessment, no typed input — that's normal for
 	// SRS), a "test" should make you actually commit to an answer first.
 	let typedAnswer = $state('');
@@ -23,7 +25,7 @@
 <p class="text-sm text-gray-500">Вопрос {current} из {total}</p>
 
 {#if rendered.kind === 'multiple_choice'}
-	<div class="rounded-md border border-gray-200 p-6">
+	<div class="rounded-md border border-gray-200 p-6 {accentClass}">
 		<div class="prose max-w-none">
 			<PreRendered html={rendered.questionHtml} />
 		</div>
@@ -31,14 +33,14 @@
 {:else}
 	<Flashcard {flipHook}>
 		{#snippet front()}
-			<div class="rounded-md border border-gray-200 p-6">
+			<div class="rounded-md border border-gray-200 p-6 {accentClass}">
 				<div class="prose max-w-none">
 					<PreRendered html={rendered.kind === 'basic' ? rendered.frontHtml : rendered.maskedHtml} />
 				</div>
 			</div>
 		{/snippet}
 		{#snippet back()}
-			<div class="rounded-md border border-gray-200 p-6">
+			<div class="rounded-md border border-gray-200 p-6 {accentClass}">
 				{#if typedAnswer.trim()}
 					<p class="text-sm text-gray-500">Твой ответ: <span class="text-gray-700">{typedAnswer}</span></p>
 					<hr class="my-3 border-gray-200" />

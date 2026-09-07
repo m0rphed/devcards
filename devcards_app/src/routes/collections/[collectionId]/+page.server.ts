@@ -12,7 +12,7 @@ import {
 } from '$lib/server/db/domain.schema';
 import { canEdit, getCollectionAccess } from '$lib/server/authz';
 import { listCollectionCards } from '$lib/server/card-search';
-import { parseCardContent } from '$lib/server/card-content';
+import { parseCardColor, parseCardContent } from '$lib/server/card-content';
 import { requireUser } from '$lib/server/require-user';
 import { getTagNamesByCard, parseTagNames, setCardTags } from '$lib/server/tags';
 import { renderCard } from '$lib/server/render-card';
@@ -134,7 +134,7 @@ export const actions: Actions = {
 
 		const [newCard] = await db
 			.insert(cards)
-			.values({ collectionId, type: parsed.type, content: parsed.content })
+			.values({ collectionId, type: parsed.type, content: parsed.content, color: parseCardColor(formData) })
 			.returning({ id: cards.id });
 		await setCardTags(newCard.id, parseTagNames(formData.get('tags')?.toString() ?? ''));
 	},
@@ -154,7 +154,7 @@ export const actions: Actions = {
 
 		await db
 			.update(cards)
-			.set({ type: parsed.type, content: parsed.content })
+			.set({ type: parsed.type, content: parsed.content, color: parseCardColor(formData) })
 			.where(and(eq(cards.id, cardId), eq(cards.collectionId, collectionId)));
 		await setCardTags(cardId, parseTagNames(formData.get('tags')?.toString() ?? ''));
 	},

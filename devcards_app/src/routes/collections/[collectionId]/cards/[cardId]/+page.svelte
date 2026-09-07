@@ -17,6 +17,7 @@
 			formAction="?/update"
 			initialType={data.card.type}
 			initialContent={data.card.content}
+			initialColor={data.card.color}
 			initialTags={data.tagNames}
 			submitLabel="Сохранить"
 		/>

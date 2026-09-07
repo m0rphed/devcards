@@ -3,7 +3,7 @@ import { and, eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { cards } from '$lib/server/db/domain.schema';
 import { canEdit, getCollectionAccess } from '$lib/server/authz';
-import { parseCardContent } from '$lib/server/card-content';
+import { parseCardColor, parseCardContent } from '$lib/server/card-content';
 import { requireUser } from '$lib/server/require-user';
 import { getCardTagNames, parseTagNames, setCardTags } from '$lib/server/tags';
 import type { Actions, PageServerLoad } from './$types';
@@ -39,7 +39,7 @@ export const actions: Actions = {
 
 		await db
 			.update(cards)
-			.set({ type: parsed.type, content: parsed.content })
+			.set({ type: parsed.type, content: parsed.content, color: parseCardColor(formData) })
 			.where(and(eq(cards.id, cardId), eq(cards.collectionId, collectionId)));
 		await setCardTags(cardId, parseTagNames(formData.get('tags')?.toString() ?? ''));
 

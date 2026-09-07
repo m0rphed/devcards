@@ -44,7 +44,8 @@ export async function forkCollection(sourceId: string, newOwnerId: string): Prom
 					id: idMap.get(c.id),
 					collectionId: newCollectionId,
 					type: c.type,
-					content: c.content
+					content: c.content,
+					color: c.color
 				}))
 			);
 

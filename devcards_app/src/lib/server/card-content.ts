@@ -1,4 +1,11 @@
 import type { CardContent } from '$lib/server/db/domain.schema';
+import { isCardColor, type CardColor } from '$lib/card-colors';
+
+/** Missing/unrecognized (e.g. the picker's "no color" option) both mean "no tint". */
+export function parseCardColor(formData: FormData): CardColor | null {
+	const raw = formData.get('color')?.toString();
+	return isCardColor(raw) ? raw : null;
+}
 
 export type ParsedCard =
 	| { ok: true; type: 'basic' | 'cloze' | 'multiple_choice'; content: CardContent }

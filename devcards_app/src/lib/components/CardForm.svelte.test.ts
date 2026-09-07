@@ -79,7 +79,11 @@ describe('CardForm — multiple_choice correct-answer RadioGroup', () => {
 	test('picking an option checks it and unchecks the previous one, both stay part of one group', async () => {
 		const screen = render(CardForm, { formAction: '?/createCard', initialType: 'multiple_choice' });
 
-		const radios = screen.getByRole('radio');
+		// Scoped by name, not plain getByRole('radio') — the card-color
+		// swatch picker (added alongside this test) is a separate RadioGroup
+		// earlier in the DOM, and it's also made of role="radio" elements;
+		// an unscoped query would silently pick those up by index instead.
+		const radios = screen.getByRole('radio', { name: /^Отметить вариант/ });
 		await expect.element(radios.nth(0)).toHaveAttribute('data-state', 'checked');
 		await expect.element(radios.nth(1)).toHaveAttribute('data-state', 'unchecked');
 
@@ -98,7 +102,7 @@ describe('CardForm — multiple_choice correct-answer RadioGroup', () => {
 			initialContent: { question: 'Q', options: ['A', 'B', 'C'], correct_index: 2 }
 		});
 
-		const radios = screen.getByRole('radio');
+		const radios = screen.getByRole('radio', { name: /^Отметить вариант/ });
 		await expect.element(radios.nth(2)).toHaveAttribute('data-state', 'checked');
 
 		// Removing option A (index 0) shifts B/C up by one; correctIndex only
@@ -107,6 +111,31 @@ describe('CardForm — multiple_choice correct-answer RadioGroup', () => {
 		// what's actually being asserted, not "always tracks the same label".
 		await screen.getByRole('button', { name: 'Удалить вариант 1' }).click();
 		await expect.element(radios.nth(1)).toHaveAttribute('data-state', 'checked');
+
+		await settleCartaPreviewDebounce();
+	});
+});
+
+describe('CardForm — card-color swatch picker', () => {
+	test('defaults to "no color" checked, and picking a swatch switches to it', async () => {
+		const screen = render(CardForm, { formAction: '?/createCard' });
+
+		await expect.element(screen.getByRole('radio', { name: 'Без цвета' })).toHaveAttribute('data-state', 'checked');
+		await expect.element(screen.getByRole('radio', { name: 'Синий' })).toHaveAttribute('data-state', 'unchecked');
+
+		await screen.getByRole('radio', { name: 'Синий' }).click();
+
+		await expect.element(screen.getByRole('radio', { name: 'Без цвета' })).toHaveAttribute('data-state', 'unchecked');
+		await expect.element(screen.getByRole('radio', { name: 'Синий' })).toHaveAttribute('data-state', 'checked');
+
+		await settleCartaPreviewDebounce();
+	});
+
+	test('initialColor seeds the matching swatch as checked', async () => {
+		const screen = render(CardForm, { formAction: '?/createCard', initialColor: 'green' });
+
+		await expect.element(screen.getByRole('radio', { name: 'Зелёный' })).toHaveAttribute('data-state', 'checked');
+		await expect.element(screen.getByRole('radio', { name: 'Без цвета' })).toHaveAttribute('data-state', 'unchecked');
 
 		await settleCartaPreviewDebounce();
 	});

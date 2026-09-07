@@ -62,7 +62,7 @@ export async function getNextQuizCard(sessionId: string, collectionId: string): 
 		.limit(1);
 
 	if (!row) return null;
-	return { id: row.card.id, type: row.card.type, content: row.card.content };
+	return { id: row.card.id, type: row.card.type, content: row.card.content, color: row.card.color };
 }
 
 /** Records one answer, and closes out the session once every card's been answered. */
