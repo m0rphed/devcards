@@ -13,10 +13,23 @@
 /* carta-md (markdown editor): required, or the code-input pane has no font.
    Targets the editor's raw <textarea> + its highlight-overlay <div>
    directly (neither is a real <code>/<pre> tag), so it doesn't inherit
-   --font-mono from Tailwind's preflight the way bare <code> would. */
+   --font-mono from Tailwind's preflight the way bare <code> would.
+   font-size bumped from the original 0.9rem: Cascadia Code reads visibly
+   smaller than a generic ui-monospace stack at the same nominal size. */
 .carta-font-code {
 	font-family: var(--font-mono);
-	font-size: 0.9rem;
+	font-size: 1rem;
 	line-height: 1.4rem;
 	letter-spacing: normal;
+}
+
+/* Fenced code blocks in rendered card content, same reasoning — and this
+   also fixes a real inconsistency: Tailwind Typography sizes `pre` at
+   .875em of its `prose` container's own font-size, which comes out to 14px
+   inside plain `prose` (study/quiz cards) but only ~12px inside `prose-sm`
+   (the collection card list, quiz results) since prose-sm's own base is
+   smaller. One fixed size here replaces both relative ones. */
+.prose :where(pre),
+.prose-sm :where(pre) {
+	font-size: 1rem;
 }
