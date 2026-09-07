@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import { onNavigate } from '$app/navigation';
 	import './layout.css';
 	// KaTeX's own stylesheet (font sizing/positioning for rendered math) —
 	// loaded globally, not just alongside the editor: study/quiz/results
@@ -10,6 +11,33 @@
 	import type { LayoutData } from './$types';
 
 	let { children, data }: { children: Snippet; data: LayoutData } = $props();
+
+	// SvelteKit's documented recipe for wiring client-side navigation to the
+	// native View Transitions API — there's no single element for a Svelte
+	// `transition:` to attach to here, since a navigation swaps the whole
+	// page, not one component. The actual transition (fade+slide) is
+	// declared as CSS in layout.css against the ::view-transition-*(root)
+	// pseudo-elements the browser creates; this hook only decides whether to
+	// ask for one at all.
+	onNavigate((navigation) => {
+		// Unsupported browser (no View Transitions API) — let the navigation
+		// happen the normal way.
+		if (!document.startViewTransition) return;
+		// Respect the OS-level motion preference explicitly rather than
+		// relying on CSS alone to cancel it: the animation in layout.css is
+		// already gated on `prefers-reduced-motion: no-preference`, but the
+		// View Transitions API still runs its own built-in default
+		// cross-fade if we start one and just leave it un-styled — so skip
+		// starting a transition at all rather than fight that default.
+		if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+		return new Promise((resolve) => {
+			document.startViewTransition(async () => {
+				resolve();
+				await navigation.complete;
+			});
+		});
+	});
 </script>
 
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>

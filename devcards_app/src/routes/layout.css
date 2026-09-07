@@ -33,3 +33,39 @@
 .prose-sm :where(pre) {
 	font-size: 1rem;
 }
+
+/* Page-navigation transitions — driven by the native View Transitions API
+   via +layout.svelte's onNavigate hook (SvelteKit's documented way to wire
+   the two together), not a Svelte element transition: SvelteKit swaps the
+   whole page on navigation, so there's no single element for `transition:`
+   to attach to. The browser snapshots old/new page states itself; these
+   pseudo-elements are just what gets animated. A plain opacity cross-fade
+   is the engine default for every ::view-transition-*(root) already — the
+   keyframes below replace it with a small fade+slide so it reads as
+   intentional rather than an unstyled default, while staying quick enough
+   not to make navigation feel slower.
+   Unsupported browsers (no View Transitions API): onNavigate's own
+   `if (!document.startViewTransition) return` no-ops entirely, so this CSS
+   simply never runs there — nothing to guard on this side. */
+@media (prefers-reduced-motion: no-preference) {
+	::view-transition-old(root) {
+		animation: 180ms ease-in both devcards-page-out;
+	}
+	::view-transition-new(root) {
+		animation: 220ms ease-out both devcards-page-in;
+	}
+}
+
+@keyframes devcards-page-out {
+	to {
+		opacity: 0;
+		transform: translateY(-6px);
+	}
+}
+
+@keyframes devcards-page-in {
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+}
