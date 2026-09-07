@@ -23,6 +23,36 @@ function drag(el: Element, path: { x: number; y: number }[]) {
 }
 
 describe('FlipCard', () => {
+	test('regression: the face swap stays in sync with the actual animated rotation, not the click', async () => {
+		// The bug this guards: content used to swap the instant `flipped`
+		// changed (a plain reactive value jumping straight to its target),
+		// while the *visual* rotation was still just a CSS transition
+		// catching up over the next ~0.4s — so the back face rendered
+		// mirrored/upside down for nearly the whole animation, only
+		// self-correcting right at the very end. Routing the swap through an
+		// actually-animating value (a Spring) means immediately after a
+		// click, before any animation frame has run, the front must still be
+		// showing — the swap can only happen once real rotation progress
+		// has crossed the midpoint.
+		// A deliberately slow spring, not the component's normal default: this
+		// makes the "still mid-flight" window wide enough (hundreds of ms) to
+		// observe reliably regardless of system load, rather than racing
+		// against however fast the real animation happens to settle.
+		const screen = render(FlipCard, {
+			front: textSnippet('Front'),
+			back: textSnippet('Back'),
+			stiffness: 0.02,
+			damping: 1
+		});
+
+		await screen.getByText('Front').click();
+		expect(screen.getByText('Back').query()).toBeNull();
+		await expect.element(screen.getByText('Front')).toBeVisible();
+
+		// ...and it does eventually settle on the back once the animation runs.
+		await expect.element(screen.getByText('Back')).toBeVisible();
+	});
+
 	test('clicking the card flips it', async () => {
 		const screen = render(FlipCard, { front: textSnippet('Front'), back: textSnippet('Back') });
 		await expect.element(screen.getByText('Front')).toBeVisible();

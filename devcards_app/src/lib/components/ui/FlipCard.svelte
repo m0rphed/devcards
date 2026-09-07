@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { Spring } from 'svelte/motion';
+	import { untrack } from 'svelte';
 	import type { Snippet } from 'svelte';
 
 	let {
@@ -6,7 +8,9 @@
 		front,
 		back,
 		onSkip,
-		disabled = false
+		disabled = false,
+		stiffness = 0.25,
+		damping = 0.9
 	}: {
 		flipped?: boolean;
 		front: Snippet;
@@ -15,15 +19,13 @@
 		onSkip?: () => void;
 		/** Ignores pointer/click entirely — `flipped` can still be changed programmatically (e.g. quiz mode gating the flip behind an explicit "commit your answer first" step). */
 		disabled?: boolean;
+		/** Tune the flip's spring feel (see rotationSpring below) — snappier/springier or slower/heavier. */
+		stiffness?: number;
+		damping?: number;
 	} = $props();
 
-	// Drag state. Not $state where it doesn't need to be reactive (startX/Y,
-	// pointerId, timestamps are read-only bookkeeping between pointer
-	// events, never rendered) — only the values that actually drive the
-	// live transform need to be.
 	let dragging = $state(false);
 	let axis: 'x' | 'y' | null = null;
-	let dragRotation = $state(0); // deg, added to the flipped base while dragging horizontally
 	let dragOffsetY = $state(0); // px, while dragging vertically (upward only — see onpointermove)
 	let flying = $state(false); // true while the post-skip fly-off transition plays
 	let startX = 0;
@@ -41,17 +43,32 @@
 		return Math.min(hi, Math.max(lo, n));
 	}
 
-	// Only one face is ever in the DOM at a time (not two absolutely-positioned
-	// faces with backface-visibility, the more common flip-card technique) —
-	// card content is arbitrary rendered markdown of unpredictable height, and
-	// that technique needs a fixed height to avoid the hidden face dictating
-	// (or ignoring) the container's size. Swapping which face renders at the
-	// 90° midpoint sidesteps it entirely, and rotation naturally hides the
-	// swap: right at 90° the card is edge-on to the viewer.
-	const baseRotation = $derived(flipped ? 180 : 0);
-	const rotation = $derived(clamp(baseRotation + (dragging && axis === 'x' ? dragRotation : 0), 0, 180));
-	const showingBack = $derived(rotation > 90);
-	const offsetY = $derived(dragging && axis === 'y' ? dragOffsetY : 0);
+	// Drives the visible rotation AND, via .current, which face is shown.
+	// This used to be a plain $derived fed into a CSS `transition: transform`
+	// — which only animates the *visual* transform. A plain reactive value
+	// jumps straight from 0 to 180 the instant you click; the front/back
+	// swap (keyed off that value crossing 90) swapped in the back face
+	// immediately too, well before the CSS animation had visually caught
+	// up — so the back face rendered upside down for most of the
+	// transition, only self-correcting right at the end (net visual
+	// rotation = css-progress-so-far + the back face's own 180°
+	// counter-rotation). Routing the swap through a real animated value
+	// (this spring) keeps content and visual rotation permanently in sync,
+	// exactly like a live drag already did (there, every intermediate
+	// degree was a real reactive update, not just a CSS-interpolated one).
+	// untrack(): a one-time construction-time snapshot — Spring's own
+	// stiffness/damping fields are meant to be tuned live if ever needed,
+	// not re-derived from these props on every change.
+	const rotationSpring = new Spring(0, untrack(() => ({ stiffness, damping })));
+	const offsetYSpring = new Spring(0, { stiffness: 0.3, damping: 0.85 });
+
+	$effect(() => {
+		// Only steer the spring from `flipped` when not actively dragging —
+		// mid-drag we're setting rotationSpring directly, frame by frame.
+		if (!dragging) rotationSpring.target = flipped ? 180 : 0;
+	});
+
+	const showingBack = $derived(rotationSpring.current > 90);
 
 	function onPointerDown(e: PointerEvent) {
 		if (flying || disabled || e.button !== 0) return;
@@ -75,11 +92,16 @@
 		}
 
 		if (axis === 'x') {
-			dragRotation = dx * FLIP_SENSITIVITY;
+			const base = flipped ? 180 : 0;
+			// instant: true — track the pointer 1:1 while dragging, no spring
+			// lag; the spring's actual physics only kick in once you let go
+			// (see onPointerUp), same split real drag-to-dismiss UIs use.
+			rotationSpring.set(clamp(base + dx * FLIP_SENSITIVITY, 0, 180), { instant: true });
 		} else if (onSkip) {
 			// Only upward movement drives anything — there's nowhere for
 			// "drag down" to go semantically, so it's just inert.
 			dragOffsetY = Math.min(0, dy);
+			offsetYSpring.set(dragOffsetY, { instant: true });
 		}
 	}
 
@@ -87,7 +109,6 @@
 		dragging = false;
 		pointerId = null;
 		axis = null;
-		dragRotation = 0;
 		dragOffsetY = 0;
 	}
 
@@ -95,12 +116,18 @@
 		if (!dragging || e.pointerId !== pointerId) return;
 		const elapsedMs = Math.max(performance.now() - startTime, 1);
 		const committedAxis = axis;
-		const finalRotation = rotation;
+		const finalRotation = rotationSpring.current;
 		const finalOffsetY = dragOffsetY;
 		settle();
 
 		if (committedAxis === 'x') {
 			flipped = finalRotation > 90;
+			// Set explicitly rather than relying solely on the $effect above:
+			// if this drag ended up back where it started (flipped didn't
+			// actually change value), that effect never re-fires, and the
+			// spring would otherwise sit stranded at whatever mid-drag angle
+			// it was released at instead of settling back to 0/180.
+			rotationSpring.target = flipped ? 180 : 0;
 		} else if (committedAxis === 'y' && onSkip) {
 			const velocity = Math.abs(finalOffsetY) / elapsedMs;
 			if (-finalOffsetY > SKIP_DISTANCE || velocity > SKIP_VELOCITY) {
@@ -109,7 +136,9 @@
 				// before telling the parent to swap in the next card out from
 				// under it.
 				setTimeout(() => onSkip(), 220);
+				return;
 			}
+			offsetYSpring.target = 0;
 		}
 	}
 
@@ -136,9 +165,8 @@
 	class="flip-scene"
 	class:flying
 	class:flip-scene--disabled={disabled}
-	style:--rotate="{rotation}deg"
-	style:--offset-y="{offsetY}px"
-	style:--transition={dragging ? 'none' : undefined}
+	style:--rotate="{rotationSpring.current}deg"
+	style:--offset-y="{offsetYSpring.current}px"
 	onpointerdown={onPointerDown}
 	onpointermove={onPointerMove}
 	onpointerup={onPointerUp}
@@ -167,10 +195,15 @@
 		cursor: default;
 	}
 	.flip-card {
+		/* No CSS transition here — rotationSpring/offsetYSpring already
+		   animate .current frame by frame; a transition on top of that
+		   would smooth already-smooth motion into a laggy mush. */
 		transform: translateY(var(--offset-y)) rotateY(var(--rotate));
-		transition: var(--transition, transform 0.4s cubic-bezier(0.22, 0.9, 0.24, 1));
 	}
 	.flying .flip-card {
+		/* The one place that *does* want a plain CSS transition: this is a
+		   one-shot committed exit, not a settle-into-place motion a spring
+		   models well. */
 		transition:
 			transform 0.22s ease-in,
 			opacity 0.22s ease-in;
