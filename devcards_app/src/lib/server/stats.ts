@@ -1,7 +1,7 @@
 import { and, countDistinct, desc, eq, gte, inArray, ne, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
-import { cards, reviewActivityDaily, reviewState } from '$lib/server/db/domain.schema';
-import type { DbState } from '$lib/server/fsrs-mapping';
+import { cards, reviewActivityDaily, reviewLog, reviewState } from '$lib/server/db/domain.schema';
+import type { DbRating, DbState } from '$lib/server/fsrs-mapping';
 
 export type CollectionProgress = { state: DbState; cardCount: number; dueCount: number };
 
@@ -49,6 +49,73 @@ export async function getReviewActivity(userId: string, days: number): Promise<D
 		correct: Number(r.correct),
 		incorrect: Number(r.incorrect)
 	}));
+}
+
+export type GradeDistribution = { rating: DbRating; count: number };
+
+/**
+ * All-time count of each grading outcome across every collection this user
+ * studies — feeds the profile page's grade-distribution chart. `review_log`
+ * is append-only (see domain.schema.ts), so this is a plain GROUP BY over
+ * its existing `(user_id, reviewed_at)` index — no new schema needed.
+ */
+export async function getGradeDistribution(userId: string): Promise<GradeDistribution[]> {
+	const rows = await db
+		.select({ rating: reviewLog.rating, count: sql<number>`count(*)::int` })
+		.from(reviewLog)
+		.where(eq(reviewLog.userId, userId))
+		.groupBy(reviewLog.rating);
+	return rows;
+}
+
+export type FsrsStateDistribution = { state: DbState; count: number };
+
+/**
+ * How many cards currently sit in each FSRS state, across every collection
+ * — only among cards this user has reviewed at least once (a `review_state`
+ * row only exists once a card's been graded). Deliberately does NOT also
+ * report a "new, never studied" bucket: that would require enumerating
+ * every card in every collection this user can access (owned + shared +
+ * public) rather than a plain query against one table, for a number that's
+ * less interesting than the studied-cards breakdown anyway.
+ */
+export async function getFsrsStateDistribution(userId: string): Promise<FsrsStateDistribution[]> {
+	const rows = await db
+		.select({ state: reviewState.state, count: sql<number>`count(*)::int` })
+		.from(reviewState)
+		.where(eq(reviewState.userId, userId))
+		.groupBy(reviewState.state);
+	return rows;
+}
+
+/**
+ * Consecutive most-recent days with at least one review, walking back from
+ * today. Pure function over getReviewActivity's own result — no separate
+ * query, no streak column anywhere. Today having no activity yet doesn't
+ * break the streak (you might still study before midnight); yesterday
+ * having none does.
+ */
+export function computeStudyStreak(activity: DailyActivity[]): number {
+	const dayKey = (d: Date) => d.toISOString().slice(0, 10);
+	const daysWithReviews = new Set(activity.filter((a) => a.reviews > 0).map((a) => dayKey(a.day)));
+
+	const cursor = new Date();
+	if (!daysWithReviews.has(dayKey(cursor))) cursor.setUTCDate(cursor.getUTCDate() - 1);
+
+	let streak = 0;
+	while (daysWithReviews.has(dayKey(cursor))) {
+		streak++;
+		cursor.setUTCDate(cursor.getUTCDate() - 1);
+	}
+	return streak;
+}
+
+/** correct / (correct + incorrect) across the given activity window, as a 0-100 integer percentage — null with zero reviews (nothing to divide). */
+export function computeRetentionRate(activity: DailyActivity[]): number | null {
+	const correct = activity.reduce((sum, a) => sum + a.correct, 0);
+	const incorrect = activity.reduce((sum, a) => sum + a.incorrect, 0);
+	const total = correct + incorrect;
+	return total === 0 ? null : Math.round((correct / total) * 100);
 }
 
 export type DeletionImpact = { cardCount: number; studierCount: number };

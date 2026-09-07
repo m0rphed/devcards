@@ -3,11 +3,31 @@ import { eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/auth.schema';
 import { requireUser } from '$lib/server/require-user';
+import {
+	computeRetentionRate,
+	computeStudyStreak,
+	getFsrsStateDistribution,
+	getGradeDistribution,
+	getReviewActivity
+} from '$lib/server/stats';
 import type { Actions, PageServerLoad } from './$types';
+
+// A year of daily buckets — enough for a GitHub-style yearly heatmap without
+// pulling in every review this user has ever made.
+const ACTIVITY_WINDOW_DAYS = 365;
 
 export const load: PageServerLoad = async (event) => {
 	const currentUser = requireUser(event);
-	return { user: currentUser };
+	const activity = await getReviewActivity(currentUser.id, ACTIVITY_WINDOW_DAYS);
+
+	return {
+		user: currentUser,
+		activity,
+		streak: computeStudyStreak(activity),
+		retentionRate: computeRetentionRate(activity),
+		gradeDistribution: await getGradeDistribution(currentUser.id),
+		fsrsStateDistribution: await getFsrsStateDistribution(currentUser.id)
+	};
 };
 
 export const actions: Actions = {

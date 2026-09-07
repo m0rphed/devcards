@@ -27,6 +27,7 @@
 		"@tailwindcss/forms": "^0.5.11",
 		"@tailwindcss/typography": "^0.5.19",
 		"@tailwindcss/vite": "^4.3.0",
+		"@types/d3-scale": "^4.0.9",
 		"@types/node": "^24",
 		"@vitest/browser-playwright": "^4.1.8",
 		"auth": "^1.6.23",
@@ -54,8 +55,10 @@
 		"bits-ui": "^2.19.0",
 		"carta-md": "^4.11.2",
 		"clsx": "^2.1.1",
+		"d3-scale": "^4.0.2",
 		"isomorphic-dompurify": "^4.1.0",
 		"katex": "^0.18.7",
+		"layerchart": "^2.4.0",
 		"resend": "^6.25.0",
 		"tailwind-merge": "^3.6.0",
 		"ts-fsrs": "^5.4.2"
