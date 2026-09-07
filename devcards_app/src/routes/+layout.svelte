@@ -30,6 +30,15 @@
 		// cross-fade if we start one and just leave it un-styled — so skip
 		// starting a transition at all rather than fight that default.
 		if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+		// onNavigate fires for every SvelteKit-classified "navigation", which
+		// is a much wider set than "the page changed": a <form method="get">
+		// (the card search box), a same-page <a href="?tag=..."> (the tag
+		// filter chips), and a grade-then-redirect-to-the-same-URL (study's
+		// "Again"/"Hard"/.../skip) are all real navigations by SvelteKit's
+		// definition, but none of them are a page-to-page move — animating
+		// the whole page on those reads as a broken flicker, not a
+		// transition. Only start one when the actual path is changing.
+		if (navigation.from?.url.pathname === navigation.to?.url.pathname) return;
 
 		return new Promise((resolve) => {
 			document.startViewTransition(async () => {
