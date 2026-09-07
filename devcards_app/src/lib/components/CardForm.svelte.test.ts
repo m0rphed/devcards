@@ -45,3 +45,69 @@ describe('CardForm — basic type has two simultaneous editors (front + back)', 
 		await settleCartaPreviewDebounce();
 	});
 });
+
+describe('CardForm — type Select switches which fields show', () => {
+	test('picking "Пропуск в тексте" swaps front/back for the cloze textarea', async () => {
+		const screen = render(CardForm, { formAction: '?/createCard' });
+
+		await expect.element(screen.getByLabelText('Лицевая сторона (markdown)')).toBeVisible();
+		// Mounting front/back schedules their own initial debounced preview
+		// render (fires once on mount regardless of typing) — switching type
+		// below unmounts both, so let that settle first or it throws trying
+		// to write into a torn-down node mid-test, not just at the end.
+		await settleCartaPreviewDebounce();
+
+		// Select.Trigger renders as a plain <button> (implicit role "button",
+		// not "combobox" — that ARIA role belongs to a different internal
+		// search-input element this non-searchable single-select never
+		// renders). getByRole('button', { name }) fails to match it — its
+		// accessible-name computation apparently trips over the chevron <svg>
+		// child despite it being aria-hidden (confirmed: getByRole('button')
+		// with no name filter finds it fine; getByText on the exact same
+		// label does too) — so target it by text instead.
+		await screen.getByText('Вопрос/ответ').click();
+		await screen.getByRole('option', { name: 'Пропуск в тексте' }).click();
+
+		await expect.element(screen.getByLabelText(/Текст с пропуском/)).toBeVisible();
+		expect(screen.getByLabelText('Лицевая сторона (markdown)').query()).toBeNull();
+
+		await settleCartaPreviewDebounce();
+	});
+});
+
+describe('CardForm — multiple_choice correct-answer RadioGroup', () => {
+	test('picking an option checks it and unchecks the previous one, both stay part of one group', async () => {
+		const screen = render(CardForm, { formAction: '?/createCard', initialType: 'multiple_choice' });
+
+		const radios = screen.getByRole('radio');
+		await expect.element(radios.nth(0)).toHaveAttribute('data-state', 'checked');
+		await expect.element(radios.nth(1)).toHaveAttribute('data-state', 'unchecked');
+
+		await radios.nth(1).click();
+
+		await expect.element(radios.nth(0)).toHaveAttribute('data-state', 'unchecked');
+		await expect.element(radios.nth(1)).toHaveAttribute('data-state', 'checked');
+
+		await settleCartaPreviewDebounce();
+	});
+
+	test('removing an option before the checked one keeps the same option checked', async () => {
+		const screen = render(CardForm, {
+			formAction: '?/createCard',
+			initialType: 'multiple_choice',
+			initialContent: { question: 'Q', options: ['A', 'B', 'C'], correct_index: 2 }
+		});
+
+		const radios = screen.getByRole('radio');
+		await expect.element(radios.nth(2)).toHaveAttribute('data-state', 'checked');
+
+		// Removing option A (index 0) shifts B/C up by one; correctIndex only
+		// self-corrects when it would otherwise point past the end of the
+		// list (removeOption's actual guard), so C staying checked here is
+		// what's actually being asserted, not "always tracks the same label".
+		await screen.getByRole('button', { name: 'Удалить вариант 1' }).click();
+		await expect.element(radios.nth(1)).toHaveAttribute('data-state', 'checked');
+
+		await settleCartaPreviewDebounce();
+	});
+});

@@ -1,11 +1,19 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { enhance } from '$app/forms';
+	import { RadioGroup } from 'bits-ui';
 	import { X } from '@lucide/svelte';
 	import { MarkdownEditor } from 'carta-md';
 	import 'carta-md/default.css';
 	import '@cartamd/plugin-attachment/default.css';
 	import { createEditorCarta } from '$lib/markdown';
+	import Select from '$lib/components/ui/Select.svelte';
+
+	const TYPE_OPTIONS = [
+		{ value: 'basic', label: 'Вопрос/ответ' },
+		{ value: 'cloze', label: 'Пропуск в тексте' },
+		{ value: 'multiple_choice', label: 'Выбор варианта' }
+	];
 
 	// One Carta instance *per editor widget* — never shared, even between
 	// fields of the same form. See createEditorCarta's doc comment: Carta
@@ -62,7 +70,10 @@
 	let clozeText = $state(untrack(() => seed?.text) ?? '');
 	let question = $state(untrack(() => seed?.question) ?? '');
 	let options = $state<string[]>(untrack(() => (seed?.options ? [...seed.options] : ['', ''])));
-	let correctIndex = $state(untrack(() => seed?.correct_index) ?? 0);
+	// String, not number: this is bits-ui RadioGroup's bound value (its own
+	// hidden input, and thus form submission, works in terms of strings) —
+	// converted to a number only where the actual index arithmetic needs it.
+	let correctIndex = $state(String(untrack(() => seed?.correct_index) ?? 0));
 	let tagsInput = $state(untrack(() => initialTags.join(', ')));
 
 	let errorMessage = $state('');
@@ -72,7 +83,7 @@
 	}
 	function removeOption(i: number) {
 		options.splice(i, 1);
-		if (correctIndex >= options.length) correctIndex = options.length - 1;
+		if (Number(correctIndex) >= options.length) correctIndex = String(options.length - 1);
 	}
 </script>
 
@@ -94,11 +105,9 @@
 >
 	<label for="{uid}-type" class="block text-sm">
 		Тип
-		<select id="{uid}-type" name="type" bind:value={type} class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-			<option value="basic">Вопрос/ответ</option>
-			<option value="cloze">Пропуск в тексте</option>
-			<option value="multiple_choice">Выбор варианта</option>
-		</select>
+		<div class="mt-1">
+			<Select id="{uid}-type" name="type" bind:value={type} options={TYPE_OPTIONS} />
+		</div>
 	</label>
 
 	{#if type === 'basic'}
@@ -150,35 +159,37 @@
 		</div>
 		<div class="flex flex-col gap-2">
 			<span class="text-sm">Варианты ответа (отметь правильный)</span>
-			{#each options as _, i}
-				<div class="flex items-center gap-2">
-					<input
-						type="radio"
-						name="correct_index"
-						value={i}
-						checked={correctIndex === i}
-						onchange={() => (correctIndex = i)}
-						aria-label="Отметить вариант {i + 1} как правильный"
-					/>
-					<input
-						name="options"
-						bind:value={options[i]}
-						required
-						placeholder="Вариант {i + 1}"
-						class="flex-1 rounded-md border-gray-300 shadow-sm"
-					/>
-					{#if options.length > 2}
-						<button
-							type="button"
-							class="text-red-600"
-							onclick={() => removeOption(i)}
-							aria-label="Удалить вариант {i + 1}"
-						>
-							<X class="size-3.5" aria-hidden="true" />
-						</button>
-					{/if}
-				</div>
-			{/each}
+			<!-- display:contents: a real RadioGroup.Root needs to wrap every
+			     item for correct roving-focus/keyboard behavior, but shouldn't
+			     interfere with the existing per-row flex layout below. -->
+			<RadioGroup.Root bind:value={correctIndex} name="correct_index" class="contents">
+				{#each options as _, i}
+					<div class="flex items-center gap-2">
+						<RadioGroup.Item
+							value={String(i)}
+							aria-label="Отметить вариант {i + 1} как правильный"
+							class="size-4 shrink-0 rounded-full border border-gray-300 data-[state=checked]:border-[5px] data-[state=checked]:border-blue-600"
+						/>
+						<input
+							name="options"
+							bind:value={options[i]}
+							required
+							placeholder="Вариант {i + 1}"
+							class="flex-1 rounded-md border-gray-300 shadow-sm"
+						/>
+						{#if options.length > 2}
+							<button
+								type="button"
+								class="text-red-600"
+								onclick={() => removeOption(i)}
+								aria-label="Удалить вариант {i + 1}"
+							>
+								<X class="size-3.5" aria-hidden="true" />
+							</button>
+						{/if}
+					</div>
+				{/each}
+			</RadioGroup.Root>
 			<button type="button" class="w-fit text-sm text-blue-600 hover:underline" onclick={addOption}>+ вариант</button>
 		</div>
 	{/if}

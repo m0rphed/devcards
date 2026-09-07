@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { Collapsible } from 'bits-ui';
 	import { Star } from '@lucide/svelte';
 	import Avatar from '$lib/components/ui/Avatar.svelte';
 	import type { ActionData, PageServerData } from './$types';
@@ -9,40 +10,45 @@
 </script>
 
 <div class="flex flex-col gap-8">
-	<div class="flex items-center justify-between">
-		<h1 class="text-xl font-semibold">Мои коллекции</h1>
-		<button
-			type="button"
-			class="rounded-md bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700"
-			onclick={() => (showCreate = !showCreate)}
-		>
-			{showCreate ? 'Отмена' : '+ Новая коллекция'}
-		</button>
-	</div>
-
-	{#if showCreate}
-		<form method="post" action="?/create" use:enhance class="flex flex-col gap-3 rounded-md border border-gray-200 p-4">
-			<label class="block text-sm">
-				Название
-				<input name="title" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" />
-			</label>
-			<label class="block text-sm">
-				Описание
-				<textarea name="description" rows="2" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-				></textarea>
-			</label>
-			<label class="flex items-center gap-2 text-sm">
-				<input type="checkbox" name="isPublic" class="rounded border-gray-300" />
-				Публичная (видна всем)
-			</label>
-			{#if form?.message}
-				<p class="text-sm text-red-600">{form.message}</p>
-			{/if}
-			<button class="w-fit rounded-md bg-blue-600 px-4 py-1.5 text-sm text-white hover:bg-blue-700">
-				Создать
-			</button>
-		</form>
-	{/if}
+	<!-- Collapsible used directly (not the generic Disclosure wrapper): same
+	     reason as [collectionId]'s "+ Карточка" toggle — the trigger needs
+	     to sit in this header's flex row, content appears below it. -->
+	<Collapsible.Root bind:open={showCreate}>
+		<div class="flex items-center justify-between">
+			<h1 class="text-xl font-semibold">Мои коллекции</h1>
+			<Collapsible.Trigger class="rounded-md bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700">
+				{showCreate ? 'Отмена' : '+ Новая коллекция'}
+			</Collapsible.Trigger>
+		</div>
+		<Collapsible.Content>
+			<form
+				method="post"
+				action="?/create"
+				use:enhance
+				class="mt-4 flex flex-col gap-3 rounded-md border border-gray-200 p-4"
+			>
+				<label class="block text-sm">
+					Название
+					<input name="title" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" />
+				</label>
+				<label class="block text-sm">
+					Описание
+					<textarea name="description" rows="2" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+					></textarea>
+				</label>
+				<label class="flex items-center gap-2 text-sm">
+					<input type="checkbox" name="isPublic" class="rounded border-gray-300" />
+					Публичная (видна всем)
+				</label>
+				{#if form?.message}
+					<p class="text-sm text-red-600">{form.message}</p>
+				{/if}
+				<button class="w-fit rounded-md bg-blue-600 px-4 py-1.5 text-sm text-white hover:bg-blue-700">
+					Создать
+				</button>
+			</form>
+		</Collapsible.Content>
+	</Collapsible.Root>
 
 	{#if data.mine.length === 0}
 		<p class="text-sm text-gray-500">Пока нет своих коллекций — создай первую.</p>

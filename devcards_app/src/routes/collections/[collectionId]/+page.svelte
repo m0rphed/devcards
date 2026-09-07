@@ -1,12 +1,21 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { Collapsible } from 'bits-ui';
 	import { PreRendered } from 'carta-md';
 	import { Check, ClipboardList, Minus, Play, Star } from '@lucide/svelte';
 	import CardForm from '$lib/components/CardForm.svelte';
 	import ConfirmDialog from '$lib/components/ui/ConfirmDialog.svelte';
 	import StarRating from '$lib/components/ui/StarRating.svelte';
 	import Avatar from '$lib/components/ui/Avatar.svelte';
+	import Disclosure from '$lib/components/ui/Disclosure.svelte';
+	import Select from '$lib/components/ui/Select.svelte';
 	import type { ActionData, PageServerData } from './$types';
+
+	const SHARE_ROLE_OPTIONS = [
+		{ value: 'viewer', label: 'viewer' },
+		{ value: 'editor', label: 'editor' }
+	];
+	let shareRole = $state('viewer');
 
 	let { data, form }: { data: PageServerData; form: ActionData } = $props();
 
@@ -86,62 +95,56 @@
 						<button class="text-sm text-blue-600 hover:underline">Скопировать себе</button>
 					</form>
 				{/if}
-				{#if isOwner}
-					<button type="button" class="text-sm text-blue-600 hover:underline" onclick={() => (showSettings = !showSettings)}>
-						{showSettings ? 'Скрыть настройки' : 'Настройки'}
-					</button>
-				{/if}
 			</div>
 		</div>
 
-		{#if isOwner && showSettings}
-			<div class="mt-4 flex flex-col gap-4 rounded-md border border-gray-200 p-4">
-				<form method="post" action="?/updateCollection" use:enhance class="flex flex-col gap-3">
-					<label class="block text-sm">
-						Название
-						<input
-							name="title"
-							required
-							value={data.collection.title}
-							class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-						/>
-					</label>
-					<label class="block text-sm">
-						Описание
-						<textarea name="description" rows="2" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-							>{data.collection.description ?? ''}</textarea
-						>
-					</label>
-					<label class="flex items-center gap-2 text-sm">
-						<input type="checkbox" name="isPublic" checked={data.collection.isPublic} class="rounded border-gray-300" />
-						Публичная
-					</label>
-					{#if form?.message}<p class="text-sm text-red-600">{form.message}</p>{/if}
-					<button class="w-fit rounded-md bg-blue-600 px-4 py-1.5 text-sm text-white hover:bg-blue-700">Сохранить</button>
-				</form>
+		{#if isOwner}
+			<Disclosure bind:open={showSettings}>
+				{#snippet trigger(open)}{open ? 'Скрыть настройки' : 'Настройки'}{/snippet}
+				<div class="flex flex-col gap-4 rounded-md border border-gray-200 p-4">
+					<form method="post" action="?/updateCollection" use:enhance class="flex flex-col gap-3">
+						<label class="block text-sm">
+							Название
+							<input
+								name="title"
+								required
+								value={data.collection.title}
+								class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+							/>
+						</label>
+						<label class="block text-sm">
+							Описание
+							<textarea name="description" rows="2" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+								>{data.collection.description ?? ''}</textarea
+							>
+						</label>
+						<label class="flex items-center gap-2 text-sm">
+							<input type="checkbox" name="isPublic" checked={data.collection.isPublic} class="rounded border-gray-300" />
+							Публичная
+						</label>
+						{#if form?.message}<p class="text-sm text-red-600">{form.message}</p>{/if}
+						<button class="w-fit rounded-md bg-blue-600 px-4 py-1.5 text-sm text-white hover:bg-blue-700">Сохранить</button>
+					</form>
 
-				<form id="delete-collection-form" method="post" action="?/deleteCollection" use:enhance></form>
-				<ConfirmDialog
-					formId="delete-collection-form"
-					title="Удалить коллекцию?"
-					triggerClass="w-fit rounded-md border border-red-300 px-4 py-1.5 text-sm text-red-600 hover:bg-red-50"
-				>
-					{#snippet trigger()}Удалить коллекцию{/snippet}
-					{#snippet description()}
-						Коллекция содержит {data.deletionImpact?.cardCount ?? data.cards.length} карточек. Это необратимо.
-						{#if data.deletionImpact?.studierCount}
-							<br />Эту коллекцию также изучают ещё {data.deletionImpact.studierCount} пользователь(ей) — их прогресс тоже
-							будет удалён.
-						{/if}
-					{/snippet}
-				</ConfirmDialog>
+					<form id="delete-collection-form" method="post" action="?/deleteCollection" use:enhance></form>
+					<ConfirmDialog
+						formId="delete-collection-form"
+						title="Удалить коллекцию?"
+						triggerClass="w-fit rounded-md border border-red-300 px-4 py-1.5 text-sm text-red-600 hover:bg-red-50"
+					>
+						{#snippet trigger()}Удалить коллекцию{/snippet}
+						{#snippet description()}
+							Коллекция содержит {data.deletionImpact?.cardCount ?? data.cards.length} карточек. Это необратимо.
+							{#if data.deletionImpact?.studierCount}
+								<br />Эту коллекцию также изучают ещё {data.deletionImpact.studierCount} пользователь(ей) — их прогресс
+								тоже будет удалён.
+							{/if}
+						{/snippet}
+					</ConfirmDialog>
 
-				<div>
-					<button type="button" class="text-sm text-blue-600 hover:underline" onclick={() => (showShare = !showShare)}>
-						{showShare ? 'Скрыть шеринг' : 'Расшарить коллекцию'}
-					</button>
-					{#if showShare}
-						<div class="mt-3 flex flex-col gap-3">
+					<Disclosure bind:open={showShare}>
+						{#snippet trigger(open)}{open ? 'Скрыть шеринг' : 'Расшарить коллекцию'}{/snippet}
+						<div class="flex flex-col gap-3">
 							{#if data.shares.length > 0}
 								<ul class="flex flex-col gap-1 text-sm">
 									{#each data.shares as s (s.userId)}
@@ -162,17 +165,16 @@
 								</label>
 								<label class="block text-sm">
 									Роль
-									<select name="role" class="mt-1 block rounded-md border-gray-300 shadow-sm">
-										<option value="viewer">viewer</option>
-										<option value="editor">editor</option>
-									</select>
+									<div class="mt-1">
+										<Select bind:value={shareRole} name="role" options={SHARE_ROLE_OPTIONS} />
+									</div>
 								</label>
 								<button class="rounded-md bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700">Дать доступ</button>
 							</form>
 						</div>
-					{/if}
+					</Disclosure>
 				</div>
-			</div>
+			</Disclosure>
 		{/if}
 	</div>
 
@@ -215,24 +217,26 @@
 	{/if}
 
 	<div>
-		<div class="mb-3 flex items-center justify-between">
-			<h2 class="text-lg font-semibold">Карточки ({data.cards.length})</h2>
-			{#if canEdit}
-				<button
-					type="button"
-					class="rounded-md bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700"
-					onclick={() => (showAddCard = !showAddCard)}
-				>
-					{showAddCard ? 'Отмена' : '+ Карточка'}
-				</button>
-			{/if}
-		</div>
-
-		{#if showAddCard}
-			<div class="mb-4 rounded-md border border-gray-200 p-4">
-				<CardForm formAction="?/createCard" submitLabel="Добавить" onSuccess={() => (showAddCard = false)} />
+		<!-- Collapsible used directly (not the generic Disclosure wrapper):
+		     the trigger button needs to sit in this header's flex row next to
+		     the "Карточки (N)" title, with content appearing as a new block
+		     below — Disclosure's wrapper assumes trigger and content are
+		     simply sequential, which doesn't fit this particular layout. -->
+		<Collapsible.Root bind:open={showAddCard}>
+			<div class="mb-3 flex items-center justify-between">
+				<h2 class="text-lg font-semibold">Карточки ({data.cards.length})</h2>
+				{#if canEdit}
+					<Collapsible.Trigger class="rounded-md bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700">
+						{showAddCard ? 'Отмена' : '+ Карточка'}
+					</Collapsible.Trigger>
+				{/if}
 			</div>
-		{/if}
+			<Collapsible.Content>
+				<div class="mb-4 rounded-md border border-gray-200 p-4">
+					<CardForm formAction="?/createCard" submitLabel="Добавить" onSuccess={() => (showAddCard = false)} />
+				</div>
+			</Collapsible.Content>
+		</Collapsible.Root>
 
 		<form method="get" class="mb-3 flex gap-2">
 			<input
