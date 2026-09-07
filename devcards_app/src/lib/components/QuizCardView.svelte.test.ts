@@ -31,6 +31,22 @@ describe('QuizCardView (basic) — typed-answer step', () => {
 		const screen = render(QuizCardView, { card, rendered, current: 3, total: 8 });
 		await expect.element(screen.getByText('Вопрос 3 из 8')).toBeVisible();
 	});
+
+	test('dragging/tapping the card before submitting an answer cannot jump straight to the answer', async () => {
+		// Regression test for FlipCard's disabled={!revealed} gate — the whole
+		// point of a test (vs /study's silent self-recall) is committing to
+		// an answer first, so a stray drag/tap on the card must not bypass it.
+		const screen = render(QuizCardView, { card, rendered, current: 1, total: 5 });
+
+		await screen.getByText('Q').click();
+		const el = screen.container.querySelector('.flip-scene')!;
+		el.dispatchEvent(new PointerEvent('pointerdown', { clientX: 0, clientY: 0, pointerId: 1, button: 0, bubbles: true }));
+		el.dispatchEvent(new PointerEvent('pointermove', { clientX: 200, clientY: 0, pointerId: 1, bubbles: true }));
+		el.dispatchEvent(new PointerEvent('pointerup', { clientX: 200, clientY: 0, pointerId: 1, bubbles: true }));
+
+		expect(screen.getByText('A').query()).toBeNull();
+		await expect.element(screen.getByText('Q')).toBeVisible();
+	});
 });
 
 describe('QuizCardView (multiple_choice) — no typed-answer step needed', () => {

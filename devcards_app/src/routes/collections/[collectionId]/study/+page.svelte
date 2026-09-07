@@ -1,9 +1,25 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { ArrowLeft } from '@lucide/svelte';
 	import StudyCardView from '$lib/components/StudyCardView.svelte';
 	import type { PageServerData } from './$types';
 
 	let { data }: { data: PageServerData } = $props();
+
+	// No mutation, just "which cards has this session already passed on" —
+	// a query param the load function reads (getNextDueCard's excludeIds),
+	// not a server action. See srs.ts: this only ever reorders the queue
+	// within the session, never shrinks it.
+	function skipCurrent() {
+		if (!data.card) return;
+		const params = new URLSearchParams(window.location.search);
+		const skipped = new Set((params.get('skip') ?? '').split(',').filter(Boolean));
+		skipped.add(data.card.id);
+		params.set('skip', [...skipped].join(','));
+		// No invalidateAll needed: the load function reads event.url directly,
+		// and SvelteKit already reruns load on any URL change, query included.
+		goto(`?${params.toString()}`, { keepFocus: true, noScroll: true });
+	}
 </script>
 
 <div class="flex flex-col gap-4">
@@ -34,7 +50,7 @@
 		     so its local "revealed" state resets. -->
 		{#key data.loadKey}
 			<!-- rendered is computed alongside card in load — non-null exactly when card is (see +page.server.ts) -->
-			<StudyCardView card={data.card} rendered={data.rendered!} remaining={data.remaining} />
+			<StudyCardView card={data.card} rendered={data.rendered!} remaining={data.remaining} onSkip={skipCurrent} />
 		{/key}
 	{/if}
 </div>

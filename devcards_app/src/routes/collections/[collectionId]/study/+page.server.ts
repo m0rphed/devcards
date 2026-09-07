@@ -14,7 +14,12 @@ export const load: PageServerLoad = async (event) => {
 	const { collection, role } = await getCollectionAccess(collectionId, currentUser.id);
 	if (!collection || role === null) error(404, 'Коллекция не найдена');
 
-	const next = await getNextDueCard(collectionId, currentUser.id);
+	// Populated client-side by StudyCardView's skip gesture (?skip=id1,id2 —
+	// no mutation, so a plain query param instead of a server action/DB
+	// write is enough; see getNextDueCard for why skipping never shrinks
+	// the queue).
+	const skipIds = event.url.searchParams.get('skip')?.split(',').filter(Boolean) ?? [];
+	const next = await getNextDueCard(collectionId, currentUser.id, skipIds);
 	const rendered = next.card ? await renderCard(next.card.type, next.card.content) : null;
 	// Only needed for the "all done" screen, but cheap enough (one indexed
 	// view scan, at most 7 rows) to just always fetch — not worth a second

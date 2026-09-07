@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import StudyCardView from './StudyCardView.svelte';
 import type { StudyCard } from '$lib/server/srs';
@@ -29,6 +29,16 @@ describe('StudyCardView (basic)', () => {
 	test('shows the remaining-cards count', async () => {
 		const screen = render(StudyCardView, { card: basicCard, rendered: basicRendered, remaining: 7 });
 		await expect.element(screen.getByText('Осталось карточек: 7')).toBeVisible();
+	});
+
+	test('"Пропустить" only appears when onSkip is given, and calls it', async () => {
+		const noSkip = render(StudyCardView, { card: basicCard, rendered: basicRendered, remaining: 1 });
+		expect(noSkip.getByText('Пропустить →').query()).toBeNull();
+
+		const onSkip = vi.fn();
+		const screen = render(StudyCardView, { card: basicCard, rendered: basicRendered, remaining: 1, onSkip });
+		await screen.getByText('Пропустить →').click();
+		expect(onSkip).toHaveBeenCalledOnce();
 	});
 });
 

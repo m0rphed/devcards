@@ -15,10 +15,21 @@ export type StudyCard = {
 	content: CardContent;
 };
 
-/** Next card due for this user in this collection (new cards count as due immediately), plus how many are left. */
+/**
+ * Next card due for this user in this collection (new cards count as due
+ * immediately), plus how many are left.
+ *
+ * `excludeIds` backs the study UI's "swipe up to skip" gesture (see
+ * FlipCard.svelte / StudyCardView.svelte): skipping only reorders this
+ * session, it never actually shrinks the queue, so `remaining` is always
+ * computed from the *full* due set, and if every remaining due card has
+ * already been skipped, the exclusion is ignored rather than ending the
+ * session early — skipped cards come back around instead of vanishing.
+ */
 export async function getNextDueCard(
 	collectionId: string,
-	userId: string
+	userId: string,
+	excludeIds: string[] = []
 ): Promise<{ card: StudyCard; remaining: number } | { card: null; remaining: 0 }> {
 	const now = new Date();
 
@@ -37,7 +48,8 @@ export async function getNextDueCard(
 
 	if (rows.length === 0) return { card: null, remaining: 0 };
 
-	const [{ card }] = rows;
+	const excludeSet = new Set(excludeIds);
+	const { card } = rows.find((r) => !excludeSet.has(r.card.id)) ?? rows[0];
 	return { card: { id: card.id, type: card.type, content: card.content }, remaining: rows.length };
 }
 

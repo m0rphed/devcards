@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { PreRendered } from 'carta-md';
+	import FlipCard from '$lib/components/ui/FlipCard.svelte';
 	import type { StudyCard } from '$lib/server/srs';
 	import type { RenderedCard } from '$lib/server/render-card';
 
@@ -14,33 +15,39 @@
 
 <p class="text-sm text-gray-500">Вопрос {current} из {total}</p>
 
-<div class="rounded-md border border-gray-200 p-6">
-	{#if rendered.kind === 'multiple_choice'}
+{#if rendered.kind === 'multiple_choice'}
+	<div class="rounded-md border border-gray-200 p-6">
 		<div class="prose max-w-none">
 			<PreRendered html={rendered.questionHtml} />
 		</div>
-	{:else if rendered.kind === 'basic'}
-		<div class="prose max-w-none">
-			<PreRendered html={rendered.frontHtml} />
-		</div>
-		{#if revealed}
-			<hr class="my-4 border-gray-200" />
-			{#if typedAnswer.trim()}
-				<p class="text-sm text-gray-500">Твой ответ: <span class="text-gray-700">{typedAnswer}</span></p>
-			{/if}
-			<div class="prose max-w-none text-gray-700">
-				<PreRendered html={rendered.backHtml} />
+	</div>
+{:else}
+	<!-- disabled until `revealed`: the whole point of a test (vs /study's
+	     silent self-recall) is committing to an answer first — a stray
+	     drag/tap on the card can't be allowed to jump straight to the
+	     answer before that. Once revealed, it's a normal FlipCard (you can
+	     flip back to re-read the question if you want). -->
+	<FlipCard bind:flipped={revealed} disabled={!revealed}>
+		{#snippet front()}
+			<div class="rounded-md border border-gray-200 p-6">
+				<div class="prose max-w-none">
+					<PreRendered html={rendered.kind === 'basic' ? rendered.frontHtml : rendered.maskedHtml} />
+				</div>
 			</div>
-		{/if}
-	{:else}
-		<div class="prose max-w-none">
-			<PreRendered html={revealed ? rendered.revealedHtml : rendered.maskedHtml} />
-		</div>
-		{#if revealed && typedAnswer.trim()}
-			<p class="mt-2 text-sm text-gray-500">Твой ответ: <span class="text-gray-700">{typedAnswer}</span></p>
-		{/if}
-	{/if}
-</div>
+		{/snippet}
+		{#snippet back()}
+			<div class="rounded-md border border-gray-200 p-6">
+				{#if typedAnswer.trim()}
+					<p class="text-sm text-gray-500">Твой ответ: <span class="text-gray-700">{typedAnswer}</span></p>
+					<hr class="my-3 border-gray-200" />
+				{/if}
+				<div class="prose max-w-none {rendered.kind === 'basic' ? 'text-gray-700' : ''}">
+					<PreRendered html={rendered.kind === 'basic' ? rendered.backHtml : rendered.revealedHtml} />
+				</div>
+			</div>
+		{/snippet}
+	</FlipCard>
+{/if}
 
 {#if rendered.kind === 'multiple_choice'}
 	<form method="post" action="?/answer" use:enhance class="flex flex-col gap-2">

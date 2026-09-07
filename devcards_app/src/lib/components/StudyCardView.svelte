@@ -2,39 +2,40 @@
 	import { enhance } from '$app/forms';
 	import { Check, Minus } from '@lucide/svelte';
 	import { PreRendered } from 'carta-md';
+	import FlipCard from '$lib/components/ui/FlipCard.svelte';
 	import type { StudyCard } from '$lib/server/srs';
 	import type { RenderedCard } from '$lib/server/render-card';
 
-	// Local `revealed` state — owned entirely by this component instance, so
+	// Local `flipped` state — owned entirely by this component instance, so
 	// the parent must recreate this component (via {#key}) whenever a new
 	// card is shown, even if it happens to be the same card id as before
 	// (e.g. "Again" bringing it right back).
-	let { card, rendered, remaining }: { card: StudyCard; rendered: RenderedCard; remaining: number } = $props();
-	let revealed = $state(false);
+	let {
+		card,
+		rendered,
+		remaining,
+		onSkip
+	}: { card: StudyCard; rendered: RenderedCard; remaining: number; onSkip?: () => void } = $props();
+	let flipped = $state(false);
 </script>
 
-<p class="text-sm text-gray-500">Осталось карточек: {remaining}</p>
+<div class="flex items-center justify-between">
+	<p class="text-sm text-gray-500">Осталось карточек: {remaining}</p>
+	{#if onSkip}
+		<button type="button" class="text-xs text-gray-400 hover:text-gray-600 hover:underline" onclick={onSkip}>
+			Пропустить →
+		</button>
+	{/if}
+</div>
 
-<div class="rounded-md border border-gray-200 p-6">
-	{#if rendered.kind === 'basic'}
-		<div class="prose max-w-none">
-			<PreRendered html={rendered.frontHtml} />
-		</div>
-		{#if revealed}
-			<hr class="my-4 border-gray-200" />
-			<div class="prose max-w-none text-gray-700">
-				<PreRendered html={rendered.backHtml} />
-			</div>
-		{/if}
-	{:else if rendered.kind === 'cloze'}
-		<div class="prose max-w-none">
-			<PreRendered html={revealed ? rendered.revealedHtml : rendered.maskedHtml} />
-		</div>
-	{:else}
+{#if rendered.kind === 'multiple_choice'}
+	<!-- Doesn't flip: revealing is "show a list of options below the
+	     question", not a front/back pair — the flip metaphor doesn't fit. -->
+	<div class="rounded-md border border-gray-200 p-6">
 		<div class="prose max-w-none">
 			<PreRendered html={rendered.questionHtml} />
 		</div>
-		{#if revealed}
+		{#if flipped}
 			<ul class="mt-4 flex flex-col gap-1">
 				{#each rendered.options as option, i}
 					<li class="flex items-center gap-1 {i === rendered.correctIndex ? 'font-medium text-green-700' : 'text-gray-600'}">
@@ -48,14 +49,31 @@
 				{/each}
 			</ul>
 		{/if}
-	{/if}
-</div>
+	</div>
+{:else}
+	<FlipCard bind:flipped {onSkip}>
+		{#snippet front()}
+			<div class="rounded-md border border-gray-200 p-6">
+				<div class="prose max-w-none">
+					<PreRendered html={rendered.kind === 'basic' ? rendered.frontHtml : rendered.maskedHtml} />
+				</div>
+			</div>
+		{/snippet}
+		{#snippet back()}
+			<div class="rounded-md border border-gray-200 p-6">
+				<div class="prose max-w-none {rendered.kind === 'basic' ? 'text-gray-700' : ''}">
+					<PreRendered html={rendered.kind === 'basic' ? rendered.backHtml : rendered.revealedHtml} />
+				</div>
+			</div>
+		{/snippet}
+	</FlipCard>
+{/if}
 
-{#if !revealed}
+{#if !flipped}
 	<button
 		type="button"
 		class="w-fit rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
-		onclick={() => (revealed = true)}
+		onclick={() => (flipped = true)}
 	>
 		Показать ответ
 	</button>
