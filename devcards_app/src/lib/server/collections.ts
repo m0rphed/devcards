@@ -1,6 +1,19 @@
 import { and, eq, inArray } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { cardTags, cards, collectionAccess, collections } from '$lib/server/db/domain.schema';
+import { isCollectionColor, type CollectionColor } from '$lib/collection-colors';
+import { isCollectionIcon, type CollectionIcon } from '$lib/collection-icons';
+
+/** Shared by the create/update collection actions, same "none sentinel" idea as parseCardColor. */
+export function parseCollectionColor(formData: FormData): CollectionColor | null {
+	const raw = formData.get('color')?.toString();
+	return isCollectionColor(raw) ? raw : null;
+}
+
+export function parseCollectionIcon(formData: FormData): CollectionIcon | null {
+	const raw = formData.get('icon')?.toString();
+	return isCollectionIcon(raw) ? raw : null;
+}
 
 /**
  * "By value" — a full independent copy: new collection (owned by
@@ -34,6 +47,8 @@ export async function forkCollection(sourceId: string, newOwnerId: string): Prom
 			// Forks start private — copying someone's content doesn't imply you
 			// want to immediately republish it under your name.
 			isPublic: false,
+			color: source.color,
+			icon: source.icon,
 			forkedFromCollectionId: source.id,
 			forkedFromUpdatedAt: source.updatedAt
 		});

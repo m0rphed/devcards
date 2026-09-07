@@ -5,7 +5,13 @@ import { collections, collectionAccess } from '$lib/server/db/domain.schema';
 import { user as userTable } from '$lib/server/db/auth.schema';
 import { requireUser } from '$lib/server/require-user';
 import { getCollectionAccess } from '$lib/server/authz';
-import { forkCollection, leaveCollection, subscribeToPublicCollection } from '$lib/server/collections';
+import {
+	forkCollection,
+	leaveCollection,
+	parseCollectionColor,
+	parseCollectionIcon,
+	subscribeToPublicCollection
+} from '$lib/server/collections';
 import { getRatingSummaries } from '$lib/server/ratings';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -79,7 +85,14 @@ export const actions: Actions = {
 			return fail(400, { message: 'Название обязательно' });
 		}
 
-		await db.insert(collections).values({ ownerId: user.id, title, description, isPublic });
+		await db.insert(collections).values({
+			ownerId: user.id,
+			title,
+			description,
+			isPublic,
+			color: parseCollectionColor(formData),
+			icon: parseCollectionIcon(formData)
+		});
 	},
 
 	subscribe: async (event) => {

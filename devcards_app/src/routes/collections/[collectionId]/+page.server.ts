@@ -17,7 +17,13 @@ import { requireUser } from '$lib/server/require-user';
 import { getTagNamesByCard, parseTagNames, setCardTags } from '$lib/server/tags';
 import { renderCard } from '$lib/server/render-card';
 import { getCardDeletionImpacts, getCollectionDeletionImpact, getCollectionProgress } from '$lib/server/stats';
-import { forkCollection, leaveCollection, subscribeToPublicCollection } from '$lib/server/collections';
+import {
+	forkCollection,
+	leaveCollection,
+	parseCollectionColor,
+	parseCollectionIcon,
+	subscribeToPublicCollection
+} from '$lib/server/collections';
 import { addComment, deleteComment, getComment, listComments } from '$lib/server/comments';
 import { getMyRating, getRatingSummary, rateCollection, removeRating } from '$lib/server/ratings';
 import type { Actions, PageServerLoad } from './$types';
@@ -184,7 +190,16 @@ export const actions: Actions = {
 		const isPublic = formData.get('isPublic') === 'on';
 		if (!title) return fail(400, { message: 'Название обязательно' });
 
-		await db.update(collections).set({ title, description, isPublic }).where(eq(collections.id, collectionId));
+		await db
+			.update(collections)
+			.set({
+				title,
+				description,
+				isPublic,
+				color: parseCollectionColor(formData),
+				icon: parseCollectionIcon(formData)
+			})
+			.where(eq(collections.id, collectionId));
 	},
 
 	deleteCollection: async (event) => {

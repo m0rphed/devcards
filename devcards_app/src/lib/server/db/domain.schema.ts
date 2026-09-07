@@ -21,6 +21,8 @@ import {
 import { user } from './auth.schema';
 import { citext, tsvector, bytea } from './custom-types';
 import { CARD_COLORS } from '$lib/card-colors';
+import { COLLECTION_COLORS } from '$lib/collection-colors';
+import type { CollectionIcon } from '$lib/collection-icons';
 
 // Attachments (card images) allow-listed here and in
 // $lib/server/attachments.ts — keep both in sync if this ever changes.
@@ -39,6 +41,10 @@ export const cardType = pgEnum('card_type', ['basic', 'cloze', 'multiple_choice'
 // Values come from $lib/card-colors (the client-facing swatch picker/accent
 // styling reads the same list) so the DB constraint and the UI can't drift.
 export const cardColor = pgEnum('card_color', [...CARD_COLORS]);
+// Separate enum from card_color on purpose — collections get the bigger
+// 16-color palette (see $lib/collection-colors.ts), and the two shouldn't
+// accidentally end up sharing/expanding one enum meant for a different UI.
+export const collectionColor = pgEnum('collection_color', [...COLLECTION_COLORS]);
 
 // Shape of `cards.content`, keyed by `cards.type`. Field names are snake_case
 // on purpose — they must match the JSON keys referenced by the CHECK
@@ -59,6 +65,13 @@ export const collections = pgTable(
 		title: text('title').notNull(),
 		description: text('description'),
 		isPublic: boolean('is_public').notNull().default(false),
+		// Cosmetic "book cover" identity for the /collections shelf view — both
+		// nullable, null means "no cover styling" (the plain list view is
+		// unaffected either way). `icon` has no DB enum on purpose: the
+		// curated devicon list (collection-icons.ts) is expected to grow
+		// without a migration each time, unlike the fixed 16-color palette.
+		color: collectionColor('color'),
+		icon: text('icon').$type<CollectionIcon>(),
 		// Set once, at fork time (see $lib/server/collections.ts's forkCollection)
 		// — never on a plain collection. `SET NULL`, deliberately unlike every
 		// other FK in this file: a fork must stay fully usable even after its

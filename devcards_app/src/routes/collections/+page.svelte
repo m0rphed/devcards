@@ -1,12 +1,45 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { enhance } from '$app/forms';
 	import { Collapsible } from 'bits-ui';
 	import { Star } from '@lucide/svelte';
 	import Avatar from '$lib/components/ui/Avatar.svelte';
+	import PerspectiveBook from '$lib/components/ui/PerspectiveBook.svelte';
+	import CollectionAppearanceFields from '$lib/components/CollectionAppearanceFields.svelte';
+	import { COLLECTION_COLOR_META } from '$lib/collection-colors';
+	import { COLLECTION_ICON_META } from '$lib/collection-icons';
 	import type { ActionData, PageServerData } from './$types';
 
 	let { data, form }: { data: PageServerData; form: ActionData } = $props();
 	let showCreate = $state(false);
+
+	// "Trial mode", not a replacement: the classic list stays the default and
+	// fully intact below — this only decides which of the two already-built
+	// renderings shows. A per-viewer preference, so localStorage rather than
+	// a DB column; PerspectiveBook is pure CSS with no JS cost per card, but
+	// many simultaneous 3D+blend-mode layers is still real paint work, so
+	// defaulting to the proven 'list' rendering is the safe choice until
+	// there's reason to flip the default.
+	const VIEW_MODE_KEY = 'devcards:collections-view-mode';
+	let viewMode = $state<'list' | 'shelf'>('list');
+
+	onMount(() => {
+		try {
+			const saved = localStorage.getItem(VIEW_MODE_KEY);
+			if (saved === 'list' || saved === 'shelf') viewMode = saved;
+		} catch {
+			// Private-browsing/blocked storage — just keep the default.
+		}
+	});
+
+	function setViewMode(mode: 'list' | 'shelf') {
+		viewMode = mode;
+		try {
+			localStorage.setItem(VIEW_MODE_KEY, mode);
+		} catch {
+			// Nothing to persist to — the in-memory choice still works for this visit.
+		}
+	}
 </script>
 
 <div class="flex flex-col gap-8">
@@ -14,11 +47,29 @@
 	     reason as [collectionId]'s "+ Карточка" toggle — the trigger needs
 	     to sit in this header's flex row, content appears below it. -->
 	<Collapsible.Root bind:open={showCreate}>
-		<div class="flex items-center justify-between">
+		<div class="flex items-center justify-between gap-3">
 			<h1 class="text-xl font-semibold">Мои коллекции</h1>
-			<Collapsible.Trigger class="rounded-md bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700">
-				{showCreate ? 'Отмена' : '+ Новая коллекция'}
-			</Collapsible.Trigger>
+			<div class="flex items-center gap-2">
+				<div class="flex rounded-md border border-gray-300 p-0.5 text-xs">
+					<button
+						type="button"
+						class="rounded px-2 py-1 {viewMode === 'list' ? 'bg-blue-600 text-white' : 'text-gray-600'}"
+						onclick={() => setViewMode('list')}
+					>
+						Список
+					</button>
+					<button
+						type="button"
+						class="rounded px-2 py-1 {viewMode === 'shelf' ? 'bg-blue-600 text-white' : 'text-gray-600'}"
+						onclick={() => setViewMode('shelf')}
+					>
+						Полка
+					</button>
+				</div>
+				<Collapsible.Trigger class="rounded-md bg-blue-600 px-3 py-1.5 text-sm whitespace-nowrap text-white hover:bg-blue-700">
+					{showCreate ? 'Отмена' : '+ Новая коллекция'}
+				</Collapsible.Trigger>
+			</div>
 		</div>
 		<Collapsible.Content>
 			<form
@@ -40,6 +91,7 @@
 					<input type="checkbox" name="isPublic" class="rounded border-gray-300" />
 					Публичная (видна всем)
 				</label>
+				<CollectionAppearanceFields />
 				{#if form?.message}
 					<p class="text-sm text-red-600">{form.message}</p>
 				{/if}
@@ -52,7 +104,7 @@
 
 	{#if data.mine.length === 0}
 		<p class="text-sm text-gray-500">Пока нет своих коллекций — создай первую.</p>
-	{:else}
+	{:else if viewMode === 'list'}
 		<ul class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 			{#each data.mine as c (c.id)}
 				<li class="rounded-md border border-gray-200 p-4 hover:border-gray-300">
@@ -66,19 +118,72 @@
 				</li>
 			{/each}
 		</ul>
+	{:else}
+		<ul class="flex flex-wrap gap-6">
+			{#each data.mine as c (c.id)}
+				<li class="flex flex-col items-center gap-2">
+					<a href="/collections/{c.id}">
+						<PerspectiveBook
+							size="sm"
+							class={c.color ? `${COLLECTION_COLOR_META[c.color].bgClass} ${COLLECTION_COLOR_META[c.color].textClass}` : undefined}
+						>
+							<div class="flex h-full flex-col justify-between">
+								{#if c.icon}
+									<img src={COLLECTION_ICON_META[c.icon].src} alt="" class="size-8" />
+								{/if}
+								<div>
+									<p class="text-sm leading-tight font-semibold">{c.title}</p>
+									{#if c.description}
+										<p class="mt-1 line-clamp-3 text-xs opacity-70">{c.description}</p>
+									{/if}
+								</div>
+							</div>
+						</PerspectiveBook>
+					</a>
+					{#if c.isPublic}
+						<span class="rounded bg-green-100 px-1.5 py-0.5 text-xs text-green-700">публичная</span>
+					{/if}
+				</li>
+			{/each}
+		</ul>
 	{/if}
 
 	{#if data.shared.length > 0}
 		<div>
 			<h2 class="mb-3 text-lg font-semibold">Расшарено со мной</h2>
-			<ul class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-				{#each data.shared as { collection, role } (collection.id)}
-					<li class="rounded-md border border-gray-200 p-4 hover:border-gray-300">
-						<a href="/collections/{collection.id}" class="font-medium text-gray-900">{collection.title}</a>
-						<span class="ml-2 rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">{role}</span>
-					</li>
-				{/each}
-			</ul>
+			{#if viewMode === 'list'}
+				<ul class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+					{#each data.shared as { collection, role } (collection.id)}
+						<li class="rounded-md border border-gray-200 p-4 hover:border-gray-300">
+							<a href="/collections/{collection.id}" class="font-medium text-gray-900">{collection.title}</a>
+							<span class="ml-2 rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">{role}</span>
+						</li>
+					{/each}
+				</ul>
+			{:else}
+				<ul class="flex flex-wrap gap-6">
+					{#each data.shared as { collection: c, role } (c.id)}
+						<li class="flex flex-col items-center gap-2">
+							<a href="/collections/{c.id}">
+								<PerspectiveBook
+									size="sm"
+									class={c.color
+										? `${COLLECTION_COLOR_META[c.color].bgClass} ${COLLECTION_COLOR_META[c.color].textClass}`
+										: undefined}
+								>
+									<div class="flex h-full flex-col justify-between">
+										{#if c.icon}
+											<img src={COLLECTION_ICON_META[c.icon].src} alt="" class="size-8" />
+										{/if}
+										<p class="text-sm leading-tight font-semibold">{c.title}</p>
+									</div>
+								</PerspectiveBook>
+							</a>
+							<span class="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">{role}</span>
+						</li>
+					{/each}
+				</ul>
+			{/if}
 		</div>
 	{/if}
 
@@ -86,7 +191,7 @@
 		<h2 class="mb-3 text-lg font-semibold">Публичные коллекции</h2>
 		{#if data.publicOnes.length === 0}
 			<p class="text-sm text-gray-500">Пока нет ни одной публичной коллекции от других пользователей.</p>
-		{:else}
+		{:else if viewMode === 'list'}
 			<ul class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 				{#each data.publicOnes as c (c.id)}
 					<li class="flex flex-col gap-2 rounded-md border border-gray-200 p-4 hover:border-gray-300">
@@ -124,6 +229,64 @@
 								<form method="post" action="?/fork" use:enhance>
 									<input type="hidden" name="collectionId" value={c.id} />
 									<button class="rounded bg-gray-100 px-2 py-1 text-gray-700 hover:bg-gray-200">Скопировать себе</button>
+								</form>
+							{/if}
+						</div>
+					</li>
+				{/each}
+			</ul>
+		{:else}
+			<ul class="flex flex-wrap gap-6">
+				{#each data.publicOnes as c (c.id)}
+					<li class="flex w-37.5 flex-col items-center gap-2">
+						<a href="/collections/{c.id}">
+							<PerspectiveBook
+								size="sm"
+								class={c.color
+									? `${COLLECTION_COLOR_META[c.color].bgClass} ${COLLECTION_COLOR_META[c.color].textClass}`
+									: undefined}
+							>
+								<div class="flex h-full flex-col justify-between">
+									{#if c.icon}
+										<img src={COLLECTION_ICON_META[c.icon].src} alt="" class="size-8" />
+									{/if}
+									<div>
+										<p class="text-sm leading-tight font-semibold">{c.title}</p>
+										{#if c.description}
+											<p class="mt-1 line-clamp-2 text-xs opacity-70">{c.description}</p>
+										{/if}
+									</div>
+								</div>
+							</PerspectiveBook>
+						</a>
+						<a href="/users/{c.ownerId}" class="flex items-center gap-1 text-xs text-gray-500 hover:underline">
+							<Avatar src={c.ownerImage} name={c.ownerName} size="xs" />
+							{c.ownerName}
+						</a>
+						{#if c.rating}
+							<span class="flex items-center gap-0.5 text-xs text-gray-500">
+								<Star class="size-3.5" fill="currentColor" aria-hidden="true" />
+								{c.rating.avgRating.toFixed(1)} ({c.rating.ratingCount})
+							</span>
+						{/if}
+						<div class="flex gap-2 text-xs">
+							{#if c.subscribed}
+								<form method="post" action="?/leave" use:enhance>
+									<input type="hidden" name="collectionId" value={c.id} />
+									<button class="rounded bg-gray-100 px-2 py-1 text-gray-700 hover:bg-gray-200">Отписаться</button>
+								</form>
+							{:else}
+								<form method="post" action="?/subscribe" use:enhance>
+									<input type="hidden" name="collectionId" value={c.id} />
+									<button class="rounded bg-gray-100 px-2 py-1 text-gray-700 hover:bg-gray-200">Добавить</button>
+								</form>
+							{/if}
+							{#if c.forked}
+								<span class="rounded bg-gray-50 px-2 py-1 text-gray-400">скопировано</span>
+							{:else}
+								<form method="post" action="?/fork" use:enhance>
+									<input type="hidden" name="collectionId" value={c.id} />
+									<button class="rounded bg-gray-100 px-2 py-1 text-gray-700 hover:bg-gray-200">Копия</button>
 								</form>
 							{/if}
 						</div>

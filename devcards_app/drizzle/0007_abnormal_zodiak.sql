@@ -1,0 +1,3 @@
+CREATE TYPE "public"."collection_color" AS ENUM('black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white', 'brightBlack', 'brightRed', 'brightGreen', 'brightYellow', 'brightBlue', 'brightMagenta', 'brightCyan', 'brightWhite');--> statement-breakpoint
+ALTER TABLE "collections" ADD COLUMN "color" "collection_color";--> statement-breakpoint
+ALTER TABLE "collections" ADD COLUMN "icon" text;

@@ -4,6 +4,7 @@
 	import { PreRendered } from 'carta-md';
 	import { Check, ClipboardList, Minus, Play, Star } from '@lucide/svelte';
 	import CardForm from '$lib/components/CardForm.svelte';
+	import CollectionAppearanceFields from '$lib/components/CollectionAppearanceFields.svelte';
 	import ConfirmDialog from '$lib/components/ui/ConfirmDialog.svelte';
 	import StarRating from '$lib/components/ui/StarRating.svelte';
 	import Avatar from '$lib/components/ui/Avatar.svelte';
@@ -123,6 +124,7 @@
 							<input type="checkbox" name="isPublic" checked={data.collection.isPublic} class="rounded border-gray-300" />
 							Публичная
 						</label>
+						<CollectionAppearanceFields initialColor={data.collection.color} initialIcon={data.collection.icon} />
 						{#if form?.message}<p class="text-sm text-red-600">{form.message}</p>{/if}
 						<button class="w-fit rounded-md bg-blue-600 px-4 py-1.5 text-sm text-white hover:bg-blue-700">Сохранить</button>
 					</form>
