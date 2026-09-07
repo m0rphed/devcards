@@ -72,6 +72,17 @@
 		const muted = COLLECTION_COLOR_META[color].textClass === 'text-white' ? 'text-white/70' : 'text-black/70';
 		return `${margin}text-sm ${muted}`;
 	}
+
+	// CSS Grid, not flex-wrap, and the same fixed track width in all three
+	// shelf sections below: Flexbox is a one-dimensional layout — flex-wrap
+	// packs items row by row with no shared notion of "column", so items in
+	// different rows (or different <ul>s with a different gap/item width)
+	// don't actually line up into a true grid, just an approximation of one.
+	// A Grid template defines real column tracks up front, so every book
+	// lands in the same column position regardless of its row or its
+	// siblings' content length — the alignment is guaranteed by the layout
+	// algorithm, not by every item happening to be the same size.
+	const SHELF_GRID_CLASS = 'grid grid-cols-[repeat(auto-fill,180px)] gap-6';
 </script>
 
 <div class="flex flex-col gap-8">
@@ -151,7 +162,7 @@
 			{/each}
 		</ul>
 	{:else}
-		<ul class="flex flex-wrap gap-6">
+		<ul class={SHELF_GRID_CLASS}>
 			{#each data.mine as c (c.id)}
 				<li class="flex flex-col items-center gap-2">
 					<a href="/collections/{c.id}">
@@ -194,7 +205,7 @@
 					{/each}
 				</ul>
 			{:else}
-				<ul class="flex flex-wrap gap-6">
+				<ul class={SHELF_GRID_CLASS}>
 					{#each data.shared as { collection: c, role } (c.id)}
 						<li class="flex flex-col items-center gap-2">
 							<a href="/collections/{c.id}">
@@ -286,9 +297,9 @@
 				{/each}
 			</ul>
 		{:else}
-			<ul class="flex flex-wrap gap-6">
+			<ul class={SHELF_GRID_CLASS}>
 				{#each data.publicOnes as c (c.id)}
-					<li class="flex w-37.5 flex-col items-center gap-2">
+					<li class="flex flex-col items-center gap-2">
 						<a href="/collections/{c.id}">
 							<PerspectiveBook
 								size="sm"
@@ -314,12 +325,14 @@
 							<Avatar src={c.ownerImage} name={c.ownerName} size="xs" />
 							{c.ownerName}
 						</a>
-						{#if c.rating}
-							<span class="flex items-center gap-0.5 text-xs text-gray-500">
-								<Star class="size-3.5" fill="currentColor" aria-hidden="true" />
-								{c.rating.avgRating.toFixed(1)} ({c.rating.ratingCount})
-							</span>
-						{/if}
+						<!-- Always rendered (never {#if}), just hidden when there's no
+						     rating yet — reserves the row's height either way, so the
+						     button row below always sits at the same offset instead of
+						     jumping up for any collection that hasn't been rated. -->
+						<span class="flex items-center gap-0.5 text-xs text-gray-500 {c.rating ? '' : 'invisible'}">
+							<Star class="size-3.5" fill="currentColor" aria-hidden="true" />
+							{c.rating ? `${c.rating.avgRating.toFixed(1)} (${c.rating.ratingCount})` : '0.0 (0)'}
+						</span>
 						<div class="flex gap-2 text-xs">
 							{#if c.subscribed}
 								<form method="post" action="?/leave" use:enhance>

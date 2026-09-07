@@ -25,8 +25,11 @@
 
 <div class="text-sm">
 	<span id="{uid}-color-label">Цвет обложки</span>
-	<RadioGroup.Root bind:value={color} name="color" aria-labelledby="{uid}-color-label" class="mt-1.5 contents">
-		<div class="flex flex-wrap items-center gap-2">
+	<!-- The mt spacing below the label lives on this inner div, not
+	     RadioGroup.Root — a `display: contents` element generates no box of
+	     its own, so margin/padding set on it is silently inert. -->
+	<RadioGroup.Root bind:value={color} name="color" aria-labelledby="{uid}-color-label" class="contents">
+		<div class="mt-2 flex flex-wrap items-center gap-2">
 			<RadioGroup.Item
 				value="none"
 				aria-label="Без цвета"
@@ -46,8 +49,8 @@
 
 <div class="text-sm">
 	<span id="{uid}-icon-label">Иконка технологии</span>
-	<RadioGroup.Root bind:value={icon} name="icon" aria-labelledby="{uid}-icon-label" class="mt-1.5 contents">
-		<div class="grid grid-cols-8 gap-2 sm:grid-cols-10">
+	<RadioGroup.Root bind:value={icon} name="icon" aria-labelledby="{uid}-icon-label" class="contents">
+		<div class="mt-2 grid grid-cols-8 gap-2 sm:grid-cols-10">
 			<RadioGroup.Item
 				value="none"
 				aria-label="Без иконки"

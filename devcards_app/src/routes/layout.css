@@ -45,14 +45,38 @@
 	padding: 1rem;
 }
 
-/* Fenced code blocks in rendered card content, same reasoning — and this
-   also fixes a real inconsistency: Tailwind Typography sizes `pre` at
-   .875em of its `prose` container's own font-size, which comes out to 14px
-   inside plain `prose` (study/quiz cards) but only ~12px inside `prose-sm`
-   (the collection card list, quiz results) since prose-sm's own base is
+/* @tailwindcss/forms' default (`base`) strategy blanket-styles every bare
+   <textarea> in the app, `:focus` included — carta-md's real editing
+   surface is one such bare <textarea> (its visible text actually comes from
+   a separate highlight-overlay <div> layered behind it), so focusing the
+   editor picked up Forms' generic blue-600 border+ring, which reads as an
+   intrusive frame slapped over carta-md's own design rather than a normal
+   text-input focus state. Restores carta-md's own neutral border color and
+   cancels the ring instead (--tw-ring-shadow to a no-op shadow neutralizes
+   it regardless of whether Forms ends up using box-shadow or outline for
+   the ring on the installed version). */
+.carta-theme__default .carta-input textarea:focus {
+	outline: 2px solid transparent;
+	outline-offset: 2px;
+	--tw-ring-shadow: 0 0 #0000;
+	box-shadow: none;
+	border-color: var(--border-color);
+}
+
+/* Fenced code blocks in rendered card content — font-family added here so
+   Preview's code blocks actually match the editor's own Cascadia Code
+   (--font-mono), not Tailwind Typography's default monospace stack
+   (ui-monospace/SFMono/Consolas/...), which is a genuinely different
+   typeface at the same declared size and reads as "the font changed size"
+   when switching between Write and Preview. font-size fixes a real
+   inconsistency on top: Tailwind Typography sizes `pre` at .875em of its
+   `prose` container's own font-size, which comes out to 14px inside plain
+   `prose` (study/quiz cards) but only ~12px inside `prose-sm` (the
+   collection card list, quiz results) since prose-sm's own base is
    smaller. One fixed size here replaces both relative ones. */
 .prose :where(pre),
 .prose-sm :where(pre) {
+	font-family: var(--font-mono);
 	font-size: 1rem;
 }
 

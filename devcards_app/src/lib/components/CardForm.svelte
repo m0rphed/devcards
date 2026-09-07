@@ -122,13 +122,13 @@
 		<!-- display:contents: same reasoning as the correct-answer RadioGroup
 		     below — wrap every swatch for roving-focus/keyboard behavior
 		     without disturbing the flex row's own layout. -->
-		<RadioGroup.Root
-			bind:value={color}
-			name="color"
-			aria-labelledby="{uid}-color-label"
-			class="mt-1.5 contents"
-		>
-			<div class="flex flex-wrap items-center gap-2">
+		<!-- The mt spacing below the label lives on this inner div, not
+		     RadioGroup.Root — a `display: contents` element (needed so the
+		     Root doesn't disturb the flex row's own layout) generates no box
+		     of its own, so any margin/padding set on it is silently inert;
+		     it has to go on a real element instead. -->
+		<RadioGroup.Root bind:value={color} name="color" aria-labelledby="{uid}-color-label" class="contents">
+			<div class="mt-2 flex flex-wrap items-center gap-2">
 				<!-- transition-transform + active:scale-95: a small press-down
 				     feel on click, same idea as the sv-animations "color-selector"
 				     spell's active:scale-90 (kept a bit more subtle here). -->

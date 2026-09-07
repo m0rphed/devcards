@@ -13,8 +13,8 @@
 		disableFlip = false,
 		onSkip,
 		onFlip,
-		stiffness = 0.25,
-		damping = 0.9
+		stiffness = 0.1,
+		damping = 0.6
 	}: {
 		front: Snippet;
 		back: Snippet;
