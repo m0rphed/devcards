@@ -23,6 +23,26 @@ function drag(el: Element, path: { x: number; y: number }[]) {
 }
 
 describe('FlipCard', () => {
+	test('regression: the settled face is not hidden by backface-visibility', async () => {
+		// A real bug that every other test in this file passed straight
+		// through: `.flip-face { backface-visibility: hidden }` looked
+		// reasonable (classic flip-card technique) but was actively wrong
+		// here — only one face is ever in the DOM at a time (no second face
+		// it could ever need to hide), and since .flip-card doesn't/can't
+		// declare transform-style: preserve-3d, the shown face's own
+		// rotateY(180deg) is evaluated as an isolated 3D context that, alone,
+		// genuinely does face away from the viewer — so it got hidden
+		// outright despite rendering correctly otherwise (confirmed via
+		// getComputedStyle: opacity 1, real layout, right content).
+		// Playwright's toBeVisible() does NOT catch this — it doesn't
+		// special-case backface-visibility — which is exactly how this
+		// shipped once already; assert on the actual computed style instead.
+		const screen = render(FlipCard, { front: textSnippet('Front'), back: textSnippet('Back'), flipped: true });
+		await expect.element(screen.getByText('Back')).toBeVisible(); // still true even when this bug is present
+		const face = screen.container.querySelector('.flip-face')!;
+		expect(getComputedStyle(face).backfaceVisibility).not.toBe('hidden');
+	});
+
 	test('regression: the face swap stays in sync with the actual animated rotation, not the click', async () => {
 		// The bug this guards: content used to swap the instant `flipped`
 		// changed (a plain reactive value jumping straight to its target),

@@ -210,12 +210,20 @@
 		transform: translateY(-140%) rotateY(var(--rotate));
 		opacity: 0;
 	}
-	.flip-face {
-		backface-visibility: hidden;
-	}
 	/* Un-mirrors the back face's content: the outer .flip-card is already at
 	   ~180° when this renders, which would otherwise show the content
-	   reversed. */
+	   reversed. No backface-visibility here on purpose — confirmed via
+	   getComputedStyle in a real browser that it actively broke this: only
+	   one face is ever in the DOM at a time (see the {#if showingBack} above),
+	   so there's no second face it could ever be needed to hide. Worse,
+	   .flip-card doesn't (and, given it needs to size itself to whichever
+	   face is showing, can't cheaply) declare `transform-style: preserve-3d`
+	   — so this element's own rotateY(180deg) is evaluated as an isolated,
+	   un-composed 3D context, which alone genuinely does face away from the
+	   viewer. `backface-visibility: hidden` then hides it outright, even
+	   though its content is correctly rendered and unmirrored (opacity 1,
+	   real layout, right innerHTML — verified directly, not guessed).
+	*/
 	.flip-face--back {
 		transform: rotateY(180deg);
 	}
