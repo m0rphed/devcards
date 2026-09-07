@@ -129,18 +129,21 @@
 			class="mt-1.5 contents"
 		>
 			<div class="flex flex-wrap items-center gap-2">
+				<!-- transition-transform + active:scale-95: a small press-down
+				     feel on click, same idea as the sv-animations "color-selector"
+				     spell's active:scale-90 (kept a bit more subtle here). -->
 				<RadioGroup.Item
 					value="none"
 					aria-label="Без цвета"
-					class="size-6 shrink-0 rounded-full border-2 border-dashed border-gray-300 bg-white data-[state=checked]:ring-2 data-[state=checked]:ring-gray-400 data-[state=checked]:ring-offset-1"
+					class="size-6 shrink-0 rounded-full border-2 border-dashed border-gray-300 bg-white transition-transform active:scale-95 data-[state=checked]:ring-2 data-[state=checked]:ring-gray-400 data-[state=checked]:ring-offset-2"
 				/>
 				{#each CARD_COLORS as c}
 					<RadioGroup.Item
 						value={c}
 						aria-label={CARD_COLOR_META[c].label}
-						class="size-6 shrink-0 rounded-full {CARD_COLOR_META[
+						class="size-6 shrink-0 rounded-full {CARD_COLOR_META[c].dot} {CARD_COLOR_META[
 							c
-						].dot} data-[state=checked]:ring-2 data-[state=checked]:ring-gray-500 data-[state=checked]:ring-offset-1"
+						].ring} transition-transform active:scale-95 data-[state=checked]:ring-2 data-[state=checked]:ring-offset-2"
 					/>
 				{/each}
 			</div>
