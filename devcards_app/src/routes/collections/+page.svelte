@@ -157,6 +157,7 @@
 					<a href="/collections/{c.id}">
 						<PerspectiveBook
 							size="sm"
+							textured
 							class={c.color ? `${COLLECTION_COLOR_META[c.color].bgClass} ${COLLECTION_COLOR_META[c.color].textClass}` : undefined}
 						>
 							<div class="flex h-full flex-col justify-between">
@@ -199,6 +200,7 @@
 							<a href="/collections/{c.id}">
 								<PerspectiveBook
 									size="sm"
+									textured
 									class={c.color
 										? `${COLLECTION_COLOR_META[c.color].bgClass} ${COLLECTION_COLOR_META[c.color].textClass}`
 										: undefined}
@@ -290,6 +292,7 @@
 						<a href="/collections/{c.id}">
 							<PerspectiveBook
 								size="sm"
+								textured
 								class={c.color
 									? `${COLLECTION_COLOR_META[c.color].bgClass} ${COLLECTION_COLOR_META[c.color].textClass}`
 									: undefined}

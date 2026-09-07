@@ -25,8 +25,14 @@
 	};
 
 	const borderRadius = '6px 4px 4px 6px';
-	const defaultColorClasses =
-		'bg-neutral-100 text-gray-900 dark:bg-[#1f1f1f] dark:before:absolute dark:before:inset-0 dark:before:rounded-[inherit] dark:before:bg-gradient-to-b dark:before:from-[#ffffff1a] dark:before:to-transparent dark:before:content-[""]';
+	// A warm beige "generic book" look for collections with no color set —
+	// deliberately not the reference component's dark: variants (this app
+	// has no dark mode anywhere else at all; carrying them over from the
+	// original spell meant any viewer with a system dark-mode preference saw
+	// this one component alone flip to a near-black `#1f1f1f` cover with
+	// low-contrast text, while every other part of the page stayed light —
+	// confirmed as the actual cause of the "cover renders black" report).
+	const defaultColorClasses = 'bg-stone-100 text-stone-900';
 
 	interface Props extends HTMLAttributes<HTMLDivElement> {
 		children?: Snippet;

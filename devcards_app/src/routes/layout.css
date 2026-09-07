@@ -23,6 +23,28 @@
 	letter-spacing: normal;
 }
 
+/* carta-md's own default.css hardcodes `.carta-input`/`.carta-renderer` at a
+   flat 600px regardless of content — sensible for a full document editor,
+   way oversized for a one-line flashcard question. `!important` isn't
+   stylistic preference here — carta-md's stylesheet is imported by
+   CardForm.svelte itself (component-level), and Vite's bundling order for
+   that vs. this layout-level file isn't something worth depending on to win
+   a plain specificity tie. `field-sizing: content` (supporting browsers)
+   makes it genuinely adaptive — grows with typed content between the
+   min/max bounds; `height` is only the fallback for browsers that don't
+   support that property yet, not a competing value. Also adds real padding
+   inside the input/preview panes themselves — the 600px rule's neighbor,
+   `.carta-wrapper`, only pads left/right, so text sat nearly flush against
+   the top-left corner. */
+.carta-theme__default .carta-input,
+.carta-theme__default .carta-renderer {
+	height: 220px !important;
+	min-height: 8rem;
+	max-height: 22rem;
+	field-sizing: content;
+	padding: 1rem;
+}
+
 /* Fenced code blocks in rendered card content, same reasoning — and this
    also fixes a real inconsistency: Tailwind Typography sizes `pre` at
    .875em of its `prose` container's own font-size, which comes out to 14px

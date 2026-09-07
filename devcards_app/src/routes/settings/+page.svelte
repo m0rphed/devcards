@@ -54,21 +54,38 @@
 	// --- Статистика ---
 	let hasAnyActivity = $derived(data.gradeDistribution.length > 0);
 
-	// Tooltip look shared by all three charts below — muted/neutral, legible
-	// on its own merit rather than relying on LayerChart's default theme
-	// variables (--color-surface-*), which this app never defines, so the
-	// built-in "default" variant renders as near-white-on-white. Deliberately
-	// not the app's own accent blue either — that's reserved for interactive
-	// controls (buttons/links), and a chart tooltip isn't one.
-	const TOOLTIP_CLASSES = { container: 'bg-gray-800 text-white shadow-lg' };
+	// Tooltip look shared by all three charts below — a plain light card
+	// (matching every other panel on this page: bg-white + border-gray-200),
+	// not a dark inversion — restrained rather than the app's own accent blue
+	// (reserved for interactive controls), but still visible via the border
+	// + shadow rather than blending into the page.
+	const TOOLTIP_CLASSES = { container: 'bg-white text-gray-900 border border-gray-200 shadow-lg' };
 
 	// Snapshot "now" once at module init, not reactively — this is a display
-	// window, not something that should recompute on every render.
+	// window, not something that should recompute on every render. Floored
+	// to exact UTC midnight: Calendar's own internal day grid (d3-time's
+	// timeDays) is always exact-midnight, and it matches data to grid cells
+	// by comparing Date *values* — a heatmapEnd/Start carrying the current
+	// HH:MM:SS (unfloored) would make every single one of our data points'
+	// timestamps miss every grid cell by that same leftover offset, which is
+	// exactly what silently produced a heatmap with no colored cells at all
+	// (not even today) — confirmed by comparing an unfloored vs floored
+	// timestamp against Calendar's own generated day list.
 	const heatmapEnd = new Date();
+	heatmapEnd.setUTCHours(0, 0, 0, 0);
 	const heatmapStart = intervalOffset('day', heatmapEnd, -90);
 
 	function dayKey(d: Date) {
 		return d.toISOString().slice(0, 10);
+	}
+
+	const heatmapDateFormat = new Intl.DateTimeFormat('ru', { day: '2-digit', month: '2-digit', year: 'numeric' });
+	// A plain identity CustomFormatter, not format="day": that built-in
+	// period-type formatting reads as m/d/yyyy (US-style) with no documented
+	// way to swap in a ru locale — pre-formatting ourselves (same Intl
+	// approach as dayLabelFormat below) sidesteps that entirely.
+	function formatHeatmapDate(value: unknown) {
+		return heatmapDateFormat.format(value as Date);
 	}
 
 	// Calendar expects one point per day in [start, end] (LayerChart's own
@@ -263,7 +280,7 @@
 
 						<Tooltip.Root classes={TOOLTIP_CLASSES}>
 							{#snippet children({ data: cellData })}
-								<Tooltip.Header value={cellData.date} format="day" />
+								<Tooltip.Header value={cellData.date} format={formatHeatmapDate} />
 								<Tooltip.List>
 									<Tooltip.Item label="повторений" value={cellData.value} format="integer" valueAlign="right" />
 								</Tooltip.List>

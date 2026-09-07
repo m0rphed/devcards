@@ -27,6 +27,6 @@ describe('PerspectiveBook', () => {
 		const screen = render(PerspectiveBook, { children: textSnippet('Cover'), class: 'bg-[#cd0000] text-white' });
 		const cover = screen.container.querySelector('.bg-\\[\\#cd0000\\]');
 		expect(cover).not.toBeNull();
-		expect(cover?.className).not.toContain('bg-neutral-100');
+		expect(cover?.className).not.toContain('bg-stone-100');
 	});
 });
