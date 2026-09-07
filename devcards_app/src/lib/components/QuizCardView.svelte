@@ -16,7 +16,12 @@
 	// can freely flip back and forth (e.g. to re-read the question).
 	const flipHook = createFlashcardFlip({ disableFlip: true });
 	let revealed = $derived(flipHook.state === 'back');
-	let accentClass = $derived(card.color ? `border-l-4 ${CARD_COLOR_META[card.color].accent}` : '');
+	// Tints the whole face, not just a strip — border-l stays for a crisp
+	// edge of full saturation, bg is the *-50 light tier so the existing
+	// dark body text (unchanged) stays readable without any extra work.
+	let accentClass = $derived(
+		card.color ? `border-l-4 ${CARD_COLOR_META[card.color].accent} ${CARD_COLOR_META[card.color].bg}` : ''
+	);
 	// Unlike /study (pure self-assessment, no typed input — that's normal for
 	// SRS), a "test" should make you actually commit to an answer first.
 	let typedAnswer = $state('');

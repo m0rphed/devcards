@@ -40,6 +40,38 @@
 			// Nothing to persist to — the in-memory choice still works for this visit.
 		}
 	}
+
+	// List-view color tinting: unlike card colors (an ordinary named Tailwind
+	// hue, where the *-50 tier is already guaranteed readable with the
+	// existing fixed dark text — see card-colors.ts), a collection's color is
+	// one of 16 arbitrary, often fully-saturated hex values — a light tint
+	// isn't really "the color" at that saturation, and black-on-navy or
+	// white-on-yellow would both fail outright. So this uses the same
+	// WCAG-computed textClass as the book cover, applied to the title and
+	// description only — badges/owner-row/rating/action buttons keep their
+	// own self-contained background+text pairing regardless (same
+	// content-vs-controls boundary StudyCardView already draws: color tints
+	// what the card *is*, not the controls around it).
+	function listCardClass(color: (typeof data.mine)[number]['color']): string {
+		// Both branches set their own border-color — built as one full class
+		// string (not appended after a fixed base) so there's never two
+		// conflicting border-color utilities in the same class list.
+		return color
+			? `rounded-md border border-transparent p-4 ${COLLECTION_COLOR_META[color].bgClass}`
+			: 'rounded-md border border-gray-200 p-4 hover:border-gray-300';
+	}
+	function listTitleClass(color: (typeof data.mine)[number]['color']): string {
+		return color ? `font-medium ${COLLECTION_COLOR_META[color].textClass}` : 'font-medium text-gray-900';
+	}
+	// withMargin: false for flex-col layouts (the "публичные" list) that
+	// already space children via `gap`, where an extra mt-1 would be
+	// redundant on top of the gap.
+	function listDescriptionClass(color: (typeof data.mine)[number]['color'], withMargin = true): string {
+		const margin = withMargin ? 'mt-1 ' : '';
+		if (!color) return `${margin}text-sm text-gray-500`;
+		const muted = COLLECTION_COLOR_META[color].textClass === 'text-white' ? 'text-white/70' : 'text-black/70';
+		return `${margin}text-sm ${muted}`;
+	}
 </script>
 
 <div class="flex flex-col gap-8">
@@ -107,13 +139,13 @@
 	{:else if viewMode === 'list'}
 		<ul class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 			{#each data.mine as c (c.id)}
-				<li class="rounded-md border border-gray-200 p-4 hover:border-gray-300">
-					<a href="/collections/{c.id}" class="font-medium text-gray-900">{c.title}</a>
+				<li class={listCardClass(c.color)}>
+					<a href="/collections/{c.id}" class={listTitleClass(c.color)}>{c.title}</a>
 					{#if c.isPublic}
 						<span class="ml-2 rounded bg-green-100 px-1.5 py-0.5 text-xs text-green-700">публичная</span>
 					{/if}
 					{#if c.description}
-						<p class="mt-1 text-sm text-gray-500">{c.description}</p>
+						<p class={listDescriptionClass(c.color)}>{c.description}</p>
 					{/if}
 				</li>
 			{/each}
@@ -154,8 +186,8 @@
 			{#if viewMode === 'list'}
 				<ul class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 					{#each data.shared as { collection, role } (collection.id)}
-						<li class="rounded-md border border-gray-200 p-4 hover:border-gray-300">
-							<a href="/collections/{collection.id}" class="font-medium text-gray-900">{collection.title}</a>
+						<li class={listCardClass(collection.color)}>
+							<a href="/collections/{collection.id}" class={listTitleClass(collection.color)}>{collection.title}</a>
 							<span class="ml-2 rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">{role}</span>
 						</li>
 					{/each}
@@ -194,10 +226,10 @@
 		{:else if viewMode === 'list'}
 			<ul class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 				{#each data.publicOnes as c (c.id)}
-					<li class="flex flex-col gap-2 rounded-md border border-gray-200 p-4 hover:border-gray-300">
-						<a href="/collections/{c.id}" class="font-medium text-gray-900">{c.title}</a>
+					<li class="flex flex-col gap-2 {listCardClass(c.color)}">
+						<a href="/collections/{c.id}" class={listTitleClass(c.color)}>{c.title}</a>
 						{#if c.description}
-							<p class="text-sm text-gray-500">{c.description}</p>
+							<p class={listDescriptionClass(c.color, false)}>{c.description}</p>
 						{/if}
 						<div class="flex items-center gap-2 text-xs text-gray-500">
 							<a href="/users/{c.ownerId}" class="flex items-center gap-1 hover:underline">

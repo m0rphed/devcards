@@ -287,7 +287,7 @@
 				{#each data.cards as card (card.id)}
 					<li
 						class="rounded-md border border-gray-200 p-4 {card.color
-							? `border-l-4 ${CARD_COLOR_META[card.color].accent}`
+							? `border-l-4 ${CARD_COLOR_META[card.color].accent} ${CARD_COLOR_META[card.color].bg}`
 							: ''}"
 					>
 						<div class="mb-1 flex items-center justify-between">
