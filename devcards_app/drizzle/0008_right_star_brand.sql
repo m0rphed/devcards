@@ -1,0 +1,2 @@
+ALTER TABLE "collections" ADD COLUMN "search_vector" "tsvector" GENERATED ALWAYS AS (to_tsvector('russian', coalesce("title", '') || ' ' || coalesce("description", ''))) STORED;--> statement-breakpoint
+CREATE INDEX "collections_search_idx" ON "collections" USING gin ("search_vector");

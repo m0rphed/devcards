@@ -72,6 +72,12 @@ export const collections = pgTable(
 		// without a migration each time, unlike the fixed 16-color palette.
 		color: collectionColor('color'),
 		icon: text('icon').$type<CollectionIcon>(),
+		// STORED generated column, same construction as cards.searchVector —
+		// backs cross-collection search (collection-search.ts), which cards
+		// already had (card-search.ts) but collections themselves didn't.
+		searchVector: tsvector('search_vector').generatedAlwaysAs(
+			sql`to_tsvector('russian', coalesce("title", '') || ' ' || coalesce("description", ''))`
+		),
 		// Set once, at fork time (see $lib/server/collections.ts's forkCollection)
 		// — never on a plain collection. `SET NULL`, deliberately unlike every
 		// other FK in this file: a fork must stay fully usable even after its
@@ -98,7 +104,8 @@ export const collections = pgTable(
 		// touch this index.
 		index('collections_public_idx')
 			.on(table.createdAt)
-			.where(sql`${table.isPublic} = true`)
+			.where(sql`${table.isPublic} = true`),
+		index('collections_search_idx').using('gin', table.searchVector)
 	]
 );
 

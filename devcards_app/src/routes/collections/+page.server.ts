@@ -2,7 +2,6 @@ import { error, fail } from '@sveltejs/kit';
 import { and, desc, eq, inArray, ne } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { collections, collectionAccess } from '$lib/server/db/domain.schema';
-import { user as userTable } from '$lib/server/db/auth.schema';
 import { requireUser } from '$lib/server/require-user';
 import { getCollectionAccess } from '$lib/server/authz';
 import {
@@ -13,10 +12,12 @@ import {
 	subscribeToPublicCollection
 } from '$lib/server/collections';
 import { getRatingSummaries } from '$lib/server/ratings';
+import { searchPublicCollections } from '$lib/server/collection-search';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async (event) => {
 	const user = requireUser(event);
+	const searchQuery = event.url.searchParams.get('q')?.trim() || undefined;
 
 	const [mine, shared, publicRows] = await Promise.all([
 		db
@@ -29,17 +30,7 @@ export const load: PageServerLoad = async (event) => {
 			.from(collectionAccess)
 			.innerJoin(collections, eq(collectionAccess.collectionId, collections.id))
 			.where(eq(collectionAccess.userId, user.id)),
-		db
-			.select({
-				collection: collections,
-				ownerName: userTable.name,
-				ownerImage: userTable.image
-			})
-			.from(collections)
-			.innerJoin(userTable, eq(collections.ownerId, userTable.id))
-			.where(and(eq(collections.isPublic, true), ne(collections.ownerId, user.id)))
-			.orderBy(desc(collections.createdAt))
-			.limit(50)
+		searchPublicCollections(user.id, searchQuery)
 	]);
 
 	const publicIds = publicRows.map((r) => r.collection.id);
@@ -70,7 +61,7 @@ export const load: PageServerLoad = async (event) => {
 		forked: forkedIds.has(r.collection.id)
 	}));
 
-	return { mine, shared, publicOnes };
+	return { mine, shared, publicOnes, searchQuery: searchQuery ?? '' };
 };
 
 export const actions: Actions = {

@@ -221,8 +221,24 @@
 
 	<div>
 		<h2 class="mb-3 text-lg font-semibold">Публичные коллекции</h2>
+		<form method="get" class="mb-3 flex gap-2">
+			<input
+				type="search"
+				name="q"
+				value={data.searchQuery}
+				placeholder="Искать по названию/описанию..."
+				class="block w-full max-w-sm rounded-md border-gray-300 text-sm shadow-sm"
+			/>
+			{#if data.searchQuery}
+				<a href="/collections" class="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50">
+					Сбросить
+				</a>
+			{/if}
+		</form>
 		{#if data.publicOnes.length === 0}
-			<p class="text-sm text-gray-500">Пока нет ни одной публичной коллекции от других пользователей.</p>
+			<p class="text-sm text-gray-500">
+				{data.searchQuery ? 'Ничего не найдено.' : 'Пока нет ни одной публичной коллекции от других пользователей.'}
+			</p>
 		{:else if viewMode === 'list'}
 			<ul class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 				{#each data.publicOnes as c (c.id)}
