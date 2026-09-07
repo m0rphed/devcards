@@ -3,6 +3,9 @@
 	import { PreRendered } from 'carta-md';
 	import { Check, ClipboardList, Minus, Play, Star } from '@lucide/svelte';
 	import CardForm from '$lib/components/CardForm.svelte';
+	import ConfirmDialog from '$lib/components/ui/ConfirmDialog.svelte';
+	import StarRating from '$lib/components/ui/StarRating.svelte';
+	import Avatar from '$lib/components/ui/Avatar.svelte';
 	import type { ActionData, PageServerData } from './$types';
 
 	let { data, form }: { data: PageServerData; form: ActionData } = $props();
@@ -117,23 +120,21 @@
 					<button class="w-fit rounded-md bg-blue-600 px-4 py-1.5 text-sm text-white hover:bg-blue-700">Сохранить</button>
 				</form>
 
-				<form
-					method="post"
-					action="?/deleteCollection"
-					use:enhance
-					onsubmit={(e) => {
-						const impact = data.deletionImpact;
-						let msg = `Удалить коллекцию (${impact?.cardCount ?? data.cards.length} карточек)? Это необратимо.`;
-						if (impact?.studierCount) {
-							msg += ` Эту коллекцию также изучают ещё ${impact.studierCount} пользователь(ей) — их прогресс тоже будет удалён.`;
-						}
-						if (!confirm(msg)) e.preventDefault();
-					}}
+				<form id="delete-collection-form" method="post" action="?/deleteCollection" use:enhance></form>
+				<ConfirmDialog
+					formId="delete-collection-form"
+					title="Удалить коллекцию?"
+					triggerClass="w-fit rounded-md border border-red-300 px-4 py-1.5 text-sm text-red-600 hover:bg-red-50"
 				>
-					<button class="w-fit rounded-md border border-red-300 px-4 py-1.5 text-sm text-red-600 hover:bg-red-50">
-						Удалить коллекцию
-					</button>
-				</form>
+					{#snippet trigger()}Удалить коллекцию{/snippet}
+					{#snippet description()}
+						Коллекция содержит {data.deletionImpact?.cardCount ?? data.cards.length} карточек. Это необратимо.
+						{#if data.deletionImpact?.studierCount}
+							<br />Эту коллекцию также изучают ещё {data.deletionImpact.studierCount} пользователь(ей) — их прогресс тоже
+							будет удалён.
+						{/if}
+					{/snippet}
+				</ConfirmDialog>
 
 				<div>
 					<button type="button" class="text-sm text-blue-600 hover:underline" onclick={() => (showShare = !showShare)}>
@@ -285,21 +286,23 @@
 									<a href="/collections/{data.collection.id}/cards/{card.id}" class="text-blue-600 hover:underline">
 										Изменить
 									</a>
-									<form
-										method="post"
-										action="?/deleteCard"
-										use:enhance
-										onsubmit={(e) => {
-											let msg = 'Удалить карточку? Вся история повторений по ней тоже удалится.';
-											if (card.otherStudierCount > 0) {
-												msg += ` Её также изучают ещё ${card.otherStudierCount} пользователь(ей) — их прогресс тоже будет удалён.`;
-											}
-											if (!confirm(msg)) e.preventDefault();
-										}}
-									>
+									<form id="delete-card-form-{card.id}" method="post" action="?/deleteCard" use:enhance>
 										<input type="hidden" name="cardId" value={card.id} />
-										<button class="text-red-600 hover:underline">Удалить</button>
 									</form>
+									<ConfirmDialog
+										formId="delete-card-form-{card.id}"
+										title="Удалить карточку?"
+										triggerClass="text-red-600 hover:underline"
+									>
+										{#snippet trigger()}Удалить{/snippet}
+										{#snippet description()}
+											Вся история повторений по ней тоже удалится.
+											{#if card.otherStudierCount > 0}
+												<br />Её также изучают ещё {card.otherStudierCount} пользователь(ей) — их прогресс тоже будет
+												удалён.
+											{/if}
+										{/snippet}
+									</ConfirmDialog>
 								</div>
 							{/if}
 						</div>
@@ -360,25 +363,10 @@
 	<div class="flex flex-col gap-4 border-t border-gray-200 pt-6">
 		<div>
 			<h2 class="mb-2 text-lg font-semibold">Оценка</h2>
-			<div class="flex items-center gap-1 text-xl">
-				{#each [1, 2, 3, 4, 5] as star}
-					<form method="post" action="?/rate" use:enhance>
-						<input type="hidden" name="rating" value={star} />
-						<button
-							class={star <= (data.myRating ?? 0) ? 'text-yellow-500' : 'text-gray-300 hover:text-yellow-400'}
-							aria-label="Оценить на {star}"
-						>
-							<Star class="size-5" fill={star <= (data.myRating ?? 0) ? 'currentColor' : 'none'} aria-hidden="true" />
-						</button>
-					</form>
-				{/each}
-				{#if data.myRating}
-					<form method="post" action="?/unrate" use:enhance>
-						<button class="ml-2 text-xs text-gray-500 hover:underline">Убрать оценку</button>
-					</form>
-				{/if}
+			<div class="flex items-center gap-3">
+				<StarRating value={data.myRating} rateAction="?/rate" unrateAction="?/unrate" />
 				{#if data.ratingSummary}
-					<span class="ml-2 text-sm text-gray-500">
+					<span class="text-sm text-gray-500">
 						среднее {data.ratingSummary.avgRating.toFixed(1)} ({data.ratingSummary.ratingCount})
 					</span>
 				{/if}
@@ -402,9 +390,7 @@
 						<li class="rounded-md border border-gray-200 p-3 text-sm">
 							<div class="mb-1 flex items-center justify-between">
 								<a href="/users/{c.authorId}" class="flex items-center gap-1.5 font-medium text-gray-900 hover:underline">
-									{#if c.authorImage}
-										<img src={c.authorImage} alt="" class="h-5 w-5 rounded-full object-cover" />
-									{/if}
+									<Avatar src={c.authorImage} name={c.authorName} size="sm" />
 									{c.authorName}
 								</a>
 								{#if c.authorId === data.myUserId || isOwner}

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { Star } from '@lucide/svelte';
+	import Avatar from '$lib/components/ui/Avatar.svelte';
 	import type { ActionData, PageServerData } from './$types';
 
 	let { data, form }: { data: PageServerData; form: ActionData } = $props();
@@ -89,9 +90,7 @@
 						{/if}
 						<div class="flex items-center gap-2 text-xs text-gray-500">
 							<a href="/users/{c.ownerId}" class="flex items-center gap-1 hover:underline">
-								{#if c.ownerImage}
-									<img src={c.ownerImage} alt="" class="h-4 w-4 rounded-full object-cover" />
-								{/if}
+								<Avatar src={c.ownerImage} name={c.ownerName} size="xs" />
 								{c.ownerName}
 							</a>
 							{#if c.rating}

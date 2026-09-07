@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Star } from '@lucide/svelte';
+	import Avatar from '$lib/components/ui/Avatar.svelte';
 	import type { PageServerData } from './$types';
 
 	let { data }: { data: PageServerData } = $props();
@@ -11,13 +12,7 @@
 
 <div class="flex flex-col gap-6">
 	<div class="flex items-center gap-4">
-		{#if data.profile.image}
-			<img src={data.profile.image} alt="" class="h-16 w-16 rounded-full object-cover" />
-		{:else}
-			<div class="flex h-16 w-16 items-center justify-center rounded-full bg-gray-200 text-xl text-gray-500">
-				{data.profile.name[0]?.toUpperCase()}
-			</div>
-		{/if}
+		<Avatar src={data.profile.image} name={data.profile.name} size="lg" />
 		<div>
 			<h1 class="text-xl font-semibold">{data.profile.name}</h1>
 			<p class="text-sm text-gray-500">На devcards с {formatDate(data.profile.memberSince)}</p>

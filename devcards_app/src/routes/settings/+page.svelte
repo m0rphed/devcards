@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import Avatar from '$lib/components/ui/Avatar.svelte';
 	import type { ActionData, PageServerData } from './$types';
 
 	let { data, form }: { data: PageServerData; form: ActionData } = $props();
@@ -42,13 +43,7 @@
 	<h1 class="text-xl font-semibold">Настройки профиля</h1>
 
 	<div class="flex items-center gap-4">
-		{#if data.user.image}
-			<img src={data.user.image} alt="" class="h-16 w-16 rounded-full object-cover" />
-		{:else}
-			<div class="flex h-16 w-16 items-center justify-center rounded-full bg-gray-200 text-xl text-gray-500">
-				{data.user.name[0]?.toUpperCase()}
-			</div>
-		{/if}
+		<Avatar src={data.user.image} name={data.user.name} size="lg" />
 		<div>
 			<label class="block text-sm text-blue-600 hover:underline">
 				{uploading ? 'Загрузка…' : 'Сменить аватар'}
