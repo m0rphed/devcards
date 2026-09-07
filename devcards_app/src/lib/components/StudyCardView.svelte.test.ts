@@ -73,10 +73,14 @@ describe('StudyCardView (multiple_choice)', () => {
 
 		await screen.getByRole('button', { name: 'Показать ответ' }).click();
 
-		// "A"/"B" alone are ambiguous (substring of "Again"/button labels etc.) —
-		// match the whole list-item text instead: "—" for the wrong option,
-		// "✓" for the correct one (index 1 -> "B").
-		await expect.element(screen.getByText('— A')).toBeVisible();
-		await expect.element(screen.getByText('✓ B')).toBeVisible();
+		// The correct/incorrect marker is now an icon (no text glyph left to
+		// match), with sr-only "Верно:"/"Неверно:" carrying the same meaning
+		// for assistive tech — locate each option's <li> via that text instead.
+		const wrongLi = screen.getByText('Неверно:').element().closest('li');
+		expect(wrongLi?.textContent).toContain('A');
+		// exact: true — "Неверно:" contains "Верно:" as a substring, so a
+		// non-exact match would ambiguously resolve to both spans.
+		const correctLi = screen.getByText('Верно:', { exact: true }).element().closest('li');
+		expect(correctLi?.textContent).toContain('B');
 	});
 });

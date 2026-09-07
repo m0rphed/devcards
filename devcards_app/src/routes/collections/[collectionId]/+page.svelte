@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { PreRendered } from 'carta-md';
+	import { Check, ClipboardList, Minus, Play, Star } from '@lucide/svelte';
 	import CardForm from '$lib/components/CardForm.svelte';
 	import type { ActionData, PageServerData } from './$types';
 
@@ -55,7 +56,10 @@
 					<p class="mt-1 text-sm text-gray-500">{data.collection.description}</p>
 				{/if}
 				{#if data.ratingSummary}
-					<p class="mt-1 text-sm text-gray-500">★ {data.ratingSummary.avgRating.toFixed(1)} ({data.ratingSummary.ratingCount})</p>
+					<p class="mt-1 flex items-center gap-1 text-sm text-gray-500">
+						<Star class="size-4" fill="currentColor" aria-hidden="true" />
+						{data.ratingSummary.avgRating.toFixed(1)} ({data.ratingSummary.ratingCount})
+					</p>
 				{/if}
 				{#if data.forkSource}
 					<p class="mt-1 text-xs text-gray-400">
@@ -176,15 +180,17 @@
 			<div class="flex gap-2">
 				<a
 					href="/collections/{data.collection.id}/study"
-					class="w-fit rounded-md bg-green-600 px-4 py-2 text-sm text-white hover:bg-green-700"
+					class="flex w-fit items-center gap-1.5 rounded-md bg-green-600 px-4 py-2 text-sm text-white hover:bg-green-700"
 				>
-					▶ Учить{totalDue > 0 ? ` (${totalDue})` : ''}
+					<Play class="size-4" fill="currentColor" aria-hidden="true" /> Учить{totalDue > 0
+						? ` (${totalDue})`
+						: ''}
 				</a>
 				<a
 					href="/collections/{data.collection.id}/quiz"
-					class="w-fit rounded-md bg-purple-600 px-4 py-2 text-sm text-white hover:bg-purple-700"
+					class="flex w-fit items-center gap-1.5 rounded-md bg-purple-600 px-4 py-2 text-sm text-white hover:bg-purple-700"
 				>
-					📝 Тест
+					<ClipboardList class="size-4" aria-hidden="true" /> Тест
 				</a>
 			</div>
 
@@ -317,8 +323,16 @@
 							</div>
 							<ul class="mt-1 text-sm">
 								{#each card.rendered.options as option, i}
-									<li class={i === card.rendered.correctIndex ? 'font-medium text-green-700' : 'text-gray-600'}>
-										{i === card.rendered.correctIndex ? '✓' : '—'}
+									<li
+										class="flex items-center gap-1 {i === card.rendered.correctIndex
+											? 'font-medium text-green-700'
+											: 'text-gray-600'}"
+									>
+										{#if i === card.rendered.correctIndex}
+											<Check class="size-4" aria-hidden="true" /><span class="sr-only">Верно:</span>
+										{:else}
+											<Minus class="size-4" aria-hidden="true" /><span class="sr-only">Неверно:</span>
+										{/if}
 										{option}
 									</li>
 								{/each}
@@ -354,7 +368,7 @@
 							class={star <= (data.myRating ?? 0) ? 'text-yellow-500' : 'text-gray-300 hover:text-yellow-400'}
 							aria-label="Оценить на {star}"
 						>
-							★
+							<Star class="size-5" fill={star <= (data.myRating ?? 0) ? 'currentColor' : 'none'} aria-hidden="true" />
 						</button>
 					</form>
 				{/each}

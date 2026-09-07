@@ -1,13 +1,14 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { ArrowLeft } from '@lucide/svelte';
 	import type { ActionData, PageServerData } from './$types';
 
 	let { data, form }: { data: PageServerData; form: ActionData } = $props();
 </script>
 
 <div class="flex flex-col gap-6">
-	<a href="/collections/{data.collection.id}" class="w-fit text-sm text-blue-600 hover:underline">
-		← {data.collection.title}
+	<a href="/collections/{data.collection.id}" class="flex w-fit items-center gap-1 text-sm text-blue-600 hover:underline">
+		<ArrowLeft class="size-4" aria-hidden="true" /> {data.collection.title}
 	</a>
 	<h1 class="text-xl font-semibold">Тест по коллекции «{data.collection.title}»</h1>
 

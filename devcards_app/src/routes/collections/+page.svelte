@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { Star } from '@lucide/svelte';
 	import type { ActionData, PageServerData } from './$types';
 
 	let { data, form }: { data: PageServerData; form: ActionData } = $props();
@@ -94,7 +95,10 @@
 								{c.ownerName}
 							</a>
 							{#if c.rating}
-								<span>★ {c.rating.avgRating.toFixed(1)} ({c.rating.ratingCount})</span>
+								<span class="flex items-center gap-0.5">
+								<Star class="size-3.5" fill="currentColor" aria-hidden="true" />
+								{c.rating.avgRating.toFixed(1)} ({c.rating.ratingCount})
+							</span>
 							{/if}
 						</div>
 						<div class="flex gap-2 text-xs">

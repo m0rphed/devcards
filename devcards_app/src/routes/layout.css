@@ -1,11 +1,21 @@
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/cascadia-code';
 @import 'tailwindcss';
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
 @import '@cartamd/plugin-code/default.css';
 
-/* carta-md (markdown editor): required, or the code-input pane has no font. */
+@theme {
+	--font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+	--font-mono: 'Cascadia Code Variable', ui-monospace, 'SF Mono', Consolas, monospace;
+}
+
+/* carta-md (markdown editor): required, or the code-input pane has no font.
+   Targets the editor's raw <textarea> + its highlight-overlay <div>
+   directly (neither is a real <code>/<pre> tag), so it doesn't inherit
+   --font-mono from Tailwind's preflight the way bare <code> would. */
 .carta-font-code {
-	font-family: ui-monospace, 'SF Mono', Consolas, monospace;
+	font-family: var(--font-mono);
 	font-size: 0.9rem;
 	line-height: 1.4rem;
 	letter-spacing: normal;

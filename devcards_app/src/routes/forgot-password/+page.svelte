@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { ArrowLeft } from '@lucide/svelte';
 	import type { ActionData } from './$types';
 
 	let { form }: { form: ActionData } = $props();
@@ -30,5 +31,7 @@
 		</form>
 	{/if}
 
-	<a href="/login" class="text-center text-sm text-blue-600 hover:underline">← Вход</a>
+	<a href="/login" class="flex items-center justify-center gap-1 text-center text-sm text-blue-600 hover:underline">
+		<ArrowLeft class="size-4" aria-hidden="true" /> Вход
+	</a>
 </div>

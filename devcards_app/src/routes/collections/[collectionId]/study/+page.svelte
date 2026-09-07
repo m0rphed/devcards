@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { ArrowLeft } from '@lucide/svelte';
 	import StudyCardView from '$lib/components/StudyCardView.svelte';
 	import type { PageServerData } from './$types';
 
@@ -6,8 +7,8 @@
 </script>
 
 <div class="flex flex-col gap-4">
-	<a href="/collections/{data.collection.id}" class="w-fit text-sm text-blue-600 hover:underline">
-		← {data.collection.title}
+	<a href="/collections/{data.collection.id}" class="flex w-fit items-center gap-1 text-sm text-blue-600 hover:underline">
+		<ArrowLeft class="size-4" aria-hidden="true" /> {data.collection.title}
 	</a>
 
 	{#if data.card === null}

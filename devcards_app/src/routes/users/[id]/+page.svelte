@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { Star } from '@lucide/svelte';
 	import type { PageServerData } from './$types';
 
 	let { data }: { data: PageServerData } = $props();
@@ -38,7 +39,10 @@
 						<div class="mt-2 flex items-center gap-2 text-xs text-gray-500">
 							<span>{c.cardCount} карточек</span>
 							{#if c.rating}
-								<span>★ {c.rating.avgRating.toFixed(1)} ({c.rating.ratingCount})</span>
+								<span class="flex items-center gap-0.5">
+								<Star class="size-3.5" fill="currentColor" aria-hidden="true" />
+								{c.rating.avgRating.toFixed(1)} ({c.rating.ratingCount})
+							</span>
 							{/if}
 						</div>
 					</li>

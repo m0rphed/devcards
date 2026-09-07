@@ -13,8 +13,19 @@ import DOMPurify from 'isomorphic-dompurify';
 // editing than it does in study/quiz.
 const sanitizer = DOMPurify.sanitize;
 function sharedExtensions() {
+	// No `theme` passed to code() here — it falls back to reusing whatever
+	// theme the owning Carta instance resolves to (see codeTheme below),
+	// so setting it in both places would just be redundant.
 	return [code(), math()];
 }
+
+// Same theme name on both sides is a deliberate workaround, not an attempt
+// at real light/dark mode (this app has none): carta-md 4.11.2 has a bug
+// where passing `theme` as a single string silently loads the wrong theme
+// data (confirmed by tracing loadHighlighter()'s single-theme branch, which
+// ends up hashing/cloning its own internal markdown grammar instead of the
+// real theme) — only the DualTheme branch loads real theme data correctly.
+const codeTheme = { light: 'catppuccin-latte', dark: 'catppuccin-latte' } as const;
 
 // Shared instance for server-side rendering (renderCard -> carta.render()).
 // Safe to share: render()/renderSSR() don't touch any per-widget state.
@@ -22,7 +33,7 @@ function sharedExtensions() {
 // `code()` (fenced code block syntax highlighting via Shiki) only runs
 // through Carta's *async* pipeline — `carta.render()`, not the sync
 // `renderSSR()` — so render-card.ts uses `render()` throughout.
-export const carta = new Carta({ sanitizer, extensions: sharedExtensions() });
+export const carta = new Carta({ sanitizer, theme: codeTheme, extensions: sharedExtensions() });
 
 /** Uploads a file to be embedded in card markdown — see the attachment()
  * plugin config below. Matches its required `(file: File) => Promise<string
@@ -57,6 +68,7 @@ async function uploadAttachment(file: File): Promise<string | null> {
 export function createEditorCarta(): Carta {
 	return new Carta({
 		sanitizer,
+		theme: codeTheme,
 		extensions: [...sharedExtensions(), attachment({ upload: uploadAttachment })]
 	});
 }

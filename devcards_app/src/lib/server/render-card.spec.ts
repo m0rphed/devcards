@@ -48,6 +48,24 @@ describe('renderCard', () => {
 		expect(rendered.frontHtml).toContain('<math');
 	});
 
+	test('basic: renders a fenced code block with the configured catppuccin-latte Shiki theme', async () => {
+		// Regression test for a real carta-md 4.11.2 bug: a single-string
+		// `theme` silently loads garbage colors instead of the real theme
+		// (traced to loadHighlighter()'s single-theme branch). markdown.ts
+		// works around it with a same-name DualTheme — assert on catppuccin-
+		// latte's actual editor.background (#eff1f5), not a guess, so a
+		// regression back to the broken path (which renders a generic dark
+		// background instead) would fail this test.
+		const rendered = await renderCard('basic', {
+			front: '```js\nconst x = 1;\n```',
+			back: 'x'
+		});
+		expect(rendered.kind).toBe('basic');
+		if (rendered.kind !== 'basic') throw new Error('unreachable');
+		expect(rendered.frontHtml).toContain('class="shiki');
+		expect(rendered.frontHtml).toContain('background-color:#eff1f5');
+	});
+
 	test('multiple_choice: renders the question, passes options through as-is', async () => {
 		const rendered = await renderCard('multiple_choice', {
 			question: 'Pick one',

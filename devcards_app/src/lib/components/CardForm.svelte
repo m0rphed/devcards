@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { enhance } from '$app/forms';
+	import { X } from '@lucide/svelte';
 	import { MarkdownEditor } from 'carta-md';
 	import 'carta-md/default.css';
 	import '@cartamd/plugin-attachment/default.css';
@@ -167,7 +168,14 @@
 						class="flex-1 rounded-md border-gray-300 shadow-sm"
 					/>
 					{#if options.length > 2}
-						<button type="button" class="text-xs text-red-600" onclick={() => removeOption(i)}>✕</button>
+						<button
+							type="button"
+							class="text-red-600"
+							onclick={() => removeOption(i)}
+							aria-label="Удалить вариант {i + 1}"
+						>
+							<X class="size-3.5" aria-hidden="true" />
+						</button>
 					{/if}
 				</div>
 			{/each}

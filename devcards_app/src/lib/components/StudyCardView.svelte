@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { Check, Minus } from '@lucide/svelte';
 	import { PreRendered } from 'carta-md';
 	import type { StudyCard } from '$lib/server/srs';
 	import type { RenderedCard } from '$lib/server/render-card';
@@ -36,8 +37,12 @@
 		{#if revealed}
 			<ul class="mt-4 flex flex-col gap-1">
 				{#each rendered.options as option, i}
-					<li class={i === rendered.correctIndex ? 'font-medium text-green-700' : 'text-gray-600'}>
-						{i === rendered.correctIndex ? '✓' : '—'}
+					<li class="flex items-center gap-1 {i === rendered.correctIndex ? 'font-medium text-green-700' : 'text-gray-600'}">
+						{#if i === rendered.correctIndex}
+							<Check class="size-4" aria-hidden="true" /><span class="sr-only">Верно:</span>
+						{:else}
+							<Minus class="size-4" aria-hidden="true" /><span class="sr-only">Неверно:</span>
+						{/if}
 						{option}
 					</li>
 				{/each}

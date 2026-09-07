@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { PreRendered } from 'carta-md';
+	import { ArrowLeft, Check, X } from '@lucide/svelte';
 	import type { PageServerData } from './$types';
 
 	let { data }: { data: PageServerData } = $props();
@@ -7,8 +8,8 @@
 </script>
 
 <div class="flex flex-col gap-6">
-	<a href="/collections/{data.collection.id}" class="w-fit text-sm text-blue-600 hover:underline">
-		← {data.collection.title}
+	<a href="/collections/{data.collection.id}" class="flex w-fit items-center gap-1 text-sm text-blue-600 hover:underline">
+		<ArrowLeft class="size-4" aria-hidden="true" /> {data.collection.title}
 	</a>
 
 	<div class="rounded-md border border-gray-200 p-6 text-center">
@@ -21,8 +22,12 @@
 		<ul class="flex flex-col gap-2">
 			{#each data.attempts as { attempt, rendered } (attempt.id)}
 				<li class="rounded-md border p-4 {attempt.isCorrect ? 'border-green-200' : 'border-red-200'}">
-					<span class="text-xs {attempt.isCorrect ? 'text-green-700' : 'text-red-700'}">
-						{attempt.isCorrect ? '✓ верно' : '✗ неверно'}
+					<span class="flex items-center gap-1 text-xs {attempt.isCorrect ? 'text-green-700' : 'text-red-700'}">
+						{#if attempt.isCorrect}
+							<Check class="size-3.5" aria-hidden="true" /> верно
+						{:else}
+							<X class="size-3.5" aria-hidden="true" /> неверно
+						{/if}
 					</span>
 
 					{#if rendered.kind === 'basic'}
