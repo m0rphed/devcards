@@ -1,6 +1,6 @@
-import { and, countDistinct, desc, eq, gte, inArray, ne, sql } from 'drizzle-orm';
+import { and, countDistinct, desc, eq, gte, inArray, lt, ne, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
-import { cards, reviewActivityDaily, reviewLog, reviewState } from '$lib/server/db/domain.schema';
+import { cardTags, cards, reviewActivityDaily, reviewLog, reviewState, tags } from '$lib/server/db/domain.schema';
 import type { DbRating, DbState } from '$lib/server/fsrs-mapping';
 
 export type CollectionProgress = { state: DbState; cardCount: number; dueCount: number };
@@ -85,6 +85,64 @@ export async function getFsrsStateDistribution(userId: string): Promise<FsrsStat
 		.from(reviewState)
 		.where(eq(reviewState.userId, userId))
 		.groupBy(reviewState.state);
+	return rows;
+}
+
+export type UpcomingReviewDay = { day: Date; dueCount: number };
+
+/**
+ * Workload forecast: how many already-tracked cards become (or already are)
+ * due over the next week, one bucket per day. `GREATEST` folds every
+ * overdue card into "today"'s bucket rather than a negative-day bucket or
+ * dropping it — the same "overdue counts as due now" rule getNextDueCard()
+ * already uses for the study queue, so this forecast and what a session
+ * actually pulls next never disagree about what "due" means.
+ *
+ * Same scoping choice as getFsrsStateDistribution: only cards with an
+ * existing `review_state` row (i.e. studied at least once) — a "new" card
+ * is due immediately too, but including it here would need enumerating
+ * every card in every collection this user can access, not just this one
+ * table.
+ */
+export async function getUpcomingReviewForecast(userId: string): Promise<UpcomingReviewDay[]> {
+	const in7Days = sql`now() + interval '7 days'`;
+	const day = sql<Date>`greatest(date_trunc('day', ${reviewState.due}), date_trunc('day', now()))`;
+	const rows = await db
+		.select({ day, dueCount: sql<number>`count(*)::int` })
+		.from(reviewState)
+		.where(and(eq(reviewState.userId, userId), lt(reviewState.due, in7Days)))
+		.groupBy(day)
+		.orderBy(day);
+	return rows;
+}
+
+export type StrugglingTag = { name: string; incorrect: number; total: number };
+
+/**
+ * Tags with the worst again/hard rate, real three-table JOIN
+ * (review_log -> card_tags -> tags) rather than a denormalized count
+ * anywhere. `HAVING count(*) >= minReviews` excludes tags with too small a
+ * sample to mean anything — one "Again" on a brand-new tag would otherwise
+ * show as a misleading 100%.
+ */
+export async function getStrugglingTags(
+	userId: string,
+	{ minReviews = 3, limit = 5 }: { minReviews?: number; limit?: number } = {}
+): Promise<StrugglingTag[]> {
+	const incorrect = sql<number>`count(*) filter (where ${reviewLog.rating} in ('again', 'hard'))::int`;
+	const total = sql<number>`count(*)::int`;
+	const errorRate = sql`${incorrect}::float / ${total}`;
+
+	const rows = await db
+		.select({ name: tags.name, incorrect, total })
+		.from(reviewLog)
+		.innerJoin(cardTags, eq(cardTags.cardId, reviewLog.cardId))
+		.innerJoin(tags, eq(tags.id, cardTags.tagId))
+		.where(eq(reviewLog.userId, userId))
+		.groupBy(tags.name)
+		.having(sql`count(*) >= ${minReviews}`)
+		.orderBy(desc(errorRate))
+		.limit(limit);
 	return rows;
 }
 

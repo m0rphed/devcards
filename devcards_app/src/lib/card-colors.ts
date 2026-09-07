@@ -11,7 +11,7 @@ export function isCardColor(value: unknown): value is CardColor {
 
 /**
  * Tailwind classes as literal strings (not built from a template) so the
- * JIT compiler can actually find them. `bg` is the *-50 tier deliberately —
+ * JIT compiler can actually find them. `bg` is the *-100 tier deliberately —
  * unlike collection colors (an arbitrary 16-hex palette needing a computed
  * contrast text color, see contrast-text.ts), card colors are ordinary
  * named Tailwind hues, and Tailwind's own light tiers (50/100) are
@@ -24,34 +24,34 @@ export const CARD_COLOR_META: Record<CardColor, { label: string; dot: string; ac
 	// sv-animations "color-selector" spell's inset+outset halo, just done as
 	// plain Tailwind utilities instead of a computed inline box-shadow (no
 	// raw color value needed, since these are already Tailwind classes).
-	red: { label: 'Красный', dot: 'bg-red-400', accent: 'border-l-red-400', bg: 'bg-red-50', ring: 'ring-red-400' },
+	red: { label: 'Красный', dot: 'bg-red-400', accent: 'border-l-red-400', bg: 'bg-red-100', ring: 'ring-red-400' },
 	orange: {
 		label: 'Оранжевый',
 		dot: 'bg-orange-400',
 		accent: 'border-l-orange-400',
-		bg: 'bg-orange-50',
+		bg: 'bg-orange-100',
 		ring: 'ring-orange-400'
 	},
 	yellow: {
 		label: 'Жёлтый',
 		dot: 'bg-yellow-400',
 		accent: 'border-l-yellow-400',
-		bg: 'bg-yellow-50',
+		bg: 'bg-yellow-100',
 		ring: 'ring-yellow-400'
 	},
 	green: {
 		label: 'Зелёный',
 		dot: 'bg-green-400',
 		accent: 'border-l-green-400',
-		bg: 'bg-green-50',
+		bg: 'bg-green-100',
 		ring: 'ring-green-400'
 	},
-	blue: { label: 'Синий', dot: 'bg-blue-400', accent: 'border-l-blue-400', bg: 'bg-blue-50', ring: 'ring-blue-400' },
+	blue: { label: 'Синий', dot: 'bg-blue-400', accent: 'border-l-blue-400', bg: 'bg-blue-100', ring: 'ring-blue-400' },
 	purple: {
 		label: 'Фиолетовый',
 		dot: 'bg-purple-400',
 		accent: 'border-l-purple-400',
-		bg: 'bg-purple-50',
+		bg: 'bg-purple-100',
 		ring: 'ring-purple-400'
 	}
 };
