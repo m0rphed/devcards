@@ -113,7 +113,16 @@ export async function getUpcomingReviewForecast(userId: string): Promise<Upcomin
 		.where(and(eq(reviewState.userId, userId), lt(reviewState.due, in7Days)))
 		.groupBy(day)
 		.orderBy(day);
-	return rows;
+	// `sql<Date>` is only a compile-time type hint — postgres-js's automatic
+	// Date-parsing only kicks in for columns it maps from a real schema
+	// column (e.g. reviewActivityDaily.day below); a raw computed SQL
+	// expression like this comes back as a plain "YYYY-MM-DD HH:MM:SS+00"
+	// string, which crashed the settings page in production (`d.toISOString
+	// is not a function`) until this explicit conversion. Verified directly
+	// against prod — confirmed by reproducing this exact query and comparing
+	// db.execute()/query-builder output (both `typeof 'string'`) against raw
+	// postgres.js's own parsed Date for the same expression.
+	return rows.map((r) => ({ ...r, day: new Date(r.day) }));
 }
 
 export type StrugglingTag = { name: string; incorrect: number; total: number };
