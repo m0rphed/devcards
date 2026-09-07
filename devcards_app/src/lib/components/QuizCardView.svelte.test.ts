@@ -21,7 +21,11 @@ describe('QuizCardView (basic) — typed-answer step', () => {
 
 		await screen.getByRole('button', { name: 'Показать ответ' }).click();
 
-		await expect.element(screen.getByText('A')).toBeVisible();
+		// Front/back visibility itself is Flashcard's job — both faces are
+		// *always* in the DOM by design (see its own tests, which check this
+		// with a real pixel-level screenshot, not just DOM presence/
+		// toBeVisible(), neither of which reflects actual 3D backface
+		// culling). What QuizCardView owns is that revealing unlocks grading.
 		await expect.element(screen.getByText('моя попытка')).toBeVisible();
 		await expect.element(screen.getByRole('button', { name: 'Верно', exact: true })).toBeVisible();
 		await expect.element(screen.getByRole('button', { name: 'Неверно' })).toBeVisible();
@@ -33,19 +37,25 @@ describe('QuizCardView (basic) — typed-answer step', () => {
 	});
 
 	test('dragging/tapping the card before submitting an answer cannot jump straight to the answer', async () => {
-		// Regression test for FlipCard's disabled={!revealed} gate — the whole
-		// point of a test (vs /study's silent self-recall) is committing to
-		// an answer first, so a stray drag/tap on the card must not bypass it.
+		// Regression test for Flashcard's disableFlip gate — the whole point of
+		// a test (vs /study's silent self-recall) is committing to an answer
+		// first, so a stray drag/tap on the card must not bypass it. Can't
+		// assert this via getByText('A').query() being null any more — both
+		// faces are *always* in the DOM (Flashcard's dual-face technique), so
+		// that would pass even if the gate were broken. Assert on the thing
+		// this component actually owns instead: grading only unlocks once the
+		// typed-answer form is submitted.
 		const screen = render(QuizCardView, { card, rendered, current: 1, total: 5 });
 
 		await screen.getByText('Q').click();
-		const el = screen.container.querySelector('.flip-scene')!;
+		const el = screen.container.querySelector('.flashcard-wrapper')!;
 		el.dispatchEvent(new PointerEvent('pointerdown', { clientX: 0, clientY: 0, pointerId: 1, button: 0, bubbles: true }));
 		el.dispatchEvent(new PointerEvent('pointermove', { clientX: 200, clientY: 0, pointerId: 1, bubbles: true }));
 		el.dispatchEvent(new PointerEvent('pointerup', { clientX: 200, clientY: 0, pointerId: 1, bubbles: true }));
 
-		expect(screen.getByText('A').query()).toBeNull();
-		await expect.element(screen.getByText('Q')).toBeVisible();
+		expect(screen.getByRole('button', { name: 'Верно', exact: true }).query()).toBeNull();
+		expect(screen.getByRole('button', { name: 'Неверно' }).query()).toBeNull();
+		await expect.element(screen.getByPlaceholder('Впиши свой ответ перед тем как посмотреть правильный...')).toBeVisible();
 	});
 });
 

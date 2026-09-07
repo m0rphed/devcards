@@ -22,3 +22,8 @@ Thumbs.db
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Vitest browser-mode screenshots (real pixel-level assertions in
+# Flashcard.svelte.test.ts save these on every run — test artifacts, not
+# something to commit)
+__screenshots__/

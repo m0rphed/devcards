@@ -1,13 +1,20 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { PreRendered } from 'carta-md';
-	import FlipCard from '$lib/components/ui/FlipCard.svelte';
+	import Flashcard from '$lib/components/ui/Flashcard.svelte';
+	import { createFlashcardFlip } from '$lib/components/ui/useFlashcard.svelte';
 	import type { StudyCard } from '$lib/server/srs';
 	import type { RenderedCard } from '$lib/server/render-card';
 
 	let { card, rendered, current, total }: { card: StudyCard; rendered: RenderedCard; current: number; total: number } =
 		$props();
-	let revealed = $state(false);
+	// Starts disabled: the whole point of a test (vs /study's silent
+	// self-recall) is committing to an answer first — a stray drag/tap on
+	// the card can't be allowed to jump straight to the answer before that.
+	// The typed-answer form below flips this open on submit; once open, you
+	// can freely flip back and forth (e.g. to re-read the question).
+	const flipHook = createFlashcardFlip({ disableFlip: true });
+	let revealed = $derived(flipHook.state === 'back');
 	// Unlike /study (pure self-assessment, no typed input — that's normal for
 	// SRS), a "test" should make you actually commit to an answer first.
 	let typedAnswer = $state('');
@@ -22,12 +29,7 @@
 		</div>
 	</div>
 {:else}
-	<!-- disabled until `revealed`: the whole point of a test (vs /study's
-	     silent self-recall) is committing to an answer first — a stray
-	     drag/tap on the card can't be allowed to jump straight to the
-	     answer before that. Once revealed, it's a normal FlipCard (you can
-	     flip back to re-read the question if you want). -->
-	<FlipCard bind:flipped={revealed} disabled={!revealed}>
+	<Flashcard {flipHook}>
 		{#snippet front()}
 			<div class="rounded-md border border-gray-200 p-6">
 				<div class="prose max-w-none">
@@ -46,7 +48,7 @@
 				</div>
 			</div>
 		{/snippet}
-	</FlipCard>
+	</Flashcard>
 {/if}
 
 {#if rendered.kind === 'multiple_choice'}
@@ -67,7 +69,8 @@
 		class="flex flex-col gap-2"
 		onsubmit={(e) => {
 			e.preventDefault();
-			revealed = true;
+			flipHook.disableFlip = false;
+			flipHook.flip('back');
 		}}
 	>
 		<label class="block text-sm">

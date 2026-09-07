@@ -12,16 +12,20 @@ const basicRendered: RenderedCard = {
 };
 
 describe('StudyCardView (basic)', () => {
-	test('shows the front, hides the back, until "Показать ответ" is clicked', async () => {
+	test('shows "Показать ответ" until clicked, then the grade buttons', async () => {
+		// Front/back content visibility itself is Flashcard's job, already
+		// covered (with a real pixel-level check, not just DOM presence —
+		// both faces are *always* in the DOM by design, see Flashcard's own
+		// tests) by its own test suite. What StudyCardView owns is which
+		// controls show at which point.
 		const screen = render(StudyCardView, { card: basicCard, rendered: basicRendered, remaining: 3 });
 
-		await expect.element(screen.getByText('Front text')).toBeVisible();
-		expect(screen.getByText('Back text').query()).toBeNull();
-		expect(screen.getByText('Again').query()).toBeNull();
+		await expect.element(screen.getByRole('button', { name: 'Показать ответ' })).toBeVisible();
+		expect(screen.getByRole('button', { name: 'Again' }).query()).toBeNull();
 
 		await screen.getByRole('button', { name: 'Показать ответ' }).click();
 
-		await expect.element(screen.getByText('Back text')).toBeVisible();
+		expect(screen.getByRole('button', { name: 'Показать ответ' }).query()).toBeNull();
 		await expect.element(screen.getByRole('button', { name: 'Again' })).toBeVisible();
 		await expect.element(screen.getByRole('button', { name: 'Easy' })).toBeVisible();
 	});
@@ -50,15 +54,15 @@ describe('StudyCardView (cloze)', () => {
 		revealedHtml: '<p>sky is blue</p>'
 	};
 
-	test('masks the answer until revealed', async () => {
+	test('shows "Показать ответ" until clicked, then the grade buttons', async () => {
 		const screen = render(StudyCardView, { card: clozeCard, rendered: clozeRendered, remaining: 1 });
 
-		await expect.element(screen.getByText('sky is [...]')).toBeVisible();
-		expect(screen.getByText('sky is blue').query()).toBeNull();
+		await expect.element(screen.getByRole('button', { name: 'Показать ответ' })).toBeVisible();
 
 		await screen.getByRole('button', { name: 'Показать ответ' }).click();
 
-		await expect.element(screen.getByText('sky is blue')).toBeVisible();
+		expect(screen.getByRole('button', { name: 'Показать ответ' }).query()).toBeNull();
+		await expect.element(screen.getByRole('button', { name: 'Again' })).toBeVisible();
 	});
 });
 

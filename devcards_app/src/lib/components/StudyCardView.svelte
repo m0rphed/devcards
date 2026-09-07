@@ -2,21 +2,24 @@
 	import { enhance } from '$app/forms';
 	import { Check, Minus } from '@lucide/svelte';
 	import { PreRendered } from 'carta-md';
-	import FlipCard from '$lib/components/ui/FlipCard.svelte';
+	import Flashcard from '$lib/components/ui/Flashcard.svelte';
+	import { createFlashcardFlip } from '$lib/components/ui/useFlashcard.svelte';
 	import type { StudyCard } from '$lib/server/srs';
 	import type { RenderedCard } from '$lib/server/render-card';
 
-	// Local `flipped` state — owned entirely by this component instance, so
-	// the parent must recreate this component (via {#key}) whenever a new
-	// card is shown, even if it happens to be the same card id as before
-	// (e.g. "Again" bringing it right back).
+	// Local flip state — owned entirely by this component instance, so the
+	// parent must recreate this component (via {#key}) whenever a new card
+	// is shown, even if it happens to be the same card id as before (e.g.
+	// "Again" bringing it right back).
 	let {
 		card,
 		rendered,
 		remaining,
 		onSkip
 	}: { card: StudyCard; rendered: RenderedCard; remaining: number; onSkip?: () => void } = $props();
-	let flipped = $state(false);
+
+	const flipHook = createFlashcardFlip();
+	let flipped = $derived(flipHook.state === 'back');
 </script>
 
 <div class="flex items-center justify-between">
@@ -51,29 +54,29 @@
 		{/if}
 	</div>
 {:else}
-	<FlipCard bind:flipped {onSkip}>
+	<Flashcard {flipHook} {onSkip}>
 		{#snippet front()}
-			<div class="rounded-md border border-gray-200 p-6">
+			<div class="h-full rounded-md border border-gray-200 p-6">
 				<div class="prose max-w-none">
 					<PreRendered html={rendered.kind === 'basic' ? rendered.frontHtml : rendered.maskedHtml} />
 				</div>
 			</div>
 		{/snippet}
 		{#snippet back()}
-			<div class="rounded-md border border-gray-200 p-6">
+			<div class="h-full rounded-md border border-gray-200 p-6">
 				<div class="prose max-w-none {rendered.kind === 'basic' ? 'text-gray-700' : ''}">
 					<PreRendered html={rendered.kind === 'basic' ? rendered.backHtml : rendered.revealedHtml} />
 				</div>
 			</div>
 		{/snippet}
-	</FlipCard>
+	</Flashcard>
 {/if}
 
 {#if !flipped}
 	<button
 		type="button"
 		class="w-fit rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
-		onclick={() => (flipped = true)}
+		onclick={() => flipHook.flip('back')}
 	>
 		Показать ответ
 	</button>
