@@ -2,6 +2,9 @@
 phase*.md
 KNOWN_RISKS.md
 PROJECT_SUMMARY.md
+report-assets/
 
 # Claude Code project-local config/state, if it ever shows up here.
 .claude/
+
+docs/
