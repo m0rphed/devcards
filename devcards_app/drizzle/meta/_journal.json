@@ -64,6 +64,20 @@
       "when": 1788814650266,
       "tag": "0008_right_star_brand",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1788845841904,
+      "tag": "0009_add_more_triggers",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1788845871802,
+      "tag": "0010_add_report_query_functions",
+      "breakpoints": true
     }
   ]
 }
