@@ -29,7 +29,7 @@ BEGIN
 
 	RETURN QUERY
 	SELECT
-		t.name,
+		t.name::text,
 		count(*),
 		count(*) FILTER (WHERE rl.rating IN ('again', 'hard')),
 		round(100.0 * count(*) FILTER (WHERE rl.rating IN ('again', 'hard')) / count(*), 1)
