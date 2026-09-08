@@ -1,6 +1,7 @@
 # Internal planning/design docs — not meant for the public repo.
 phase*.md
 KNOWN_RISKS.md
+PROJECT_SUMMARY.md
 
 # Claude Code project-local config/state, if it ever shows up here.
 .claude/
